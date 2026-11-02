@@ -1,0 +1,26 @@
+name: Bug report
+description: Something in a generated guide or a script is wrong
+labels: [bug]
+body:
+  - type: input
+    id: video
+    attributes:
+      label: Video link
+      description: The YouTube video the guide was built from (if relevant)
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead. Screenshots help.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps or command
+      description: The request you gave Claude Code, or the script command and its output
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      description: OS, Python version, yt-dlp version (`yt-dlp --version`), browser

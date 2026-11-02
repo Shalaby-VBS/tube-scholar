@@ -5,7 +5,7 @@ The contract between what Claude writes and what `build_guide.py` renders. Write
 ## Folder
 
 ```
-~/Downloads/yt-grab/<Folder>/
+~/Downloads/tube-scholar/<Folder>/
   <title>.<lang>.vtt        subtitles (subs mode)
   <title>.<lang>.txt        clean transcript (vtt2txt.py)
   meta/                     fetch_meta.py output, do not edit

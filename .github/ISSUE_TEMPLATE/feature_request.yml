@@ -1,0 +1,16 @@
+name: Feature request
+description: Suggest an improvement to the guides or the pipeline
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What is hard or missing today when learning from a guide?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What you would like the guide or the skill to do

@@ -4,15 +4,19 @@
 
 <br>
 
-[![Claude Code skill](https://img.shields.io/badge/Claude_Code-skill-D97757?style=flat-square)](https://claude.com/claude-code)
+[![CI](https://img.shields.io/github/actions/workflow/status/Shalaby-VBS/tube-scholar/ci.yml?branch=main&style=flat-square&label=tests)](https://github.com/Shalaby-VBS/tube-scholar/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Shalaby-VBS/tube-scholar?style=flat-square&color=3DC1AF)](https://github.com/Shalaby-VBS/tube-scholar/releases)
+[![Claude Code plugin](https://img.shields.io/badge/Claude_Code-plugin-D97757?style=flat-square)](#install)
 [![License: MIT](https://img.shields.io/badge/license-MIT-3DC1AF?style=flat-square)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-3776AB?style=flat-square&logo=python&logoColor=white)](#requirements)
 [![yt-dlp](https://img.shields.io/badge/powered_by-yt--dlp-E0201B?style=flat-square&logo=youtube&logoColor=white)](https://github.com/yt-dlp/yt-dlp)
 [![Languages](https://img.shields.io/badge/guides-Arabic_%2B_English-13202A?style=flat-square)](#what-you-get)
 
+<a href="https://shalaby-vbs.github.io/tube-scholar/demo/"><img src="https://img.shields.io/badge/%E2%96%B6%20Try%20the%20live%20demo-3DC1AF?style=for-the-badge" alt="Try the live demo"></a>
+
 **[What you get](#what-you-get)** ·
 **[Tour](#a-tour-of-a-guide)** ·
-**[Quick start](#quick-start)** ·
+**[Install](#install)** ·
 **[How it works](#how-it-works)** ·
 **[Accuracy](#how-it-stays-accurate)** ·
 **[Concept visuals](#concept-visuals)** ·
@@ -26,6 +30,8 @@
 Tube Scholar is a [Claude Code](https://claude.com/claude-code) skill that turns a YouTube video into a complete, interactive study guide. It reads the entire transcript, writes an academic explanation of everything the speaker teaches in **Arabic and English**, has an independent agent fact-check every number and claim against the transcript, and publishes the result as a single page you can share.
 
 A 38-minute lecture becomes a 5-minute summary. A 3-hour course becomes nineteen sections you can skim, search, quiz yourself on and jump back into the video from, at the exact minute.
+
+**[Open the live demo](https://shalaby-vbs.github.io/tube-scholar/demo/)**: the full guide for a 3-hour freeCodeCamp system-design course, built by this skill. Switch languages, search for "sharding", take the quiz, flip the flashcards.
 
 <div align="center">
 <img src="docs/hero.png" alt="The top of a generated study guide: video, stats, channel card and title" width="100%">
@@ -99,21 +105,31 @@ A 38-minute lecture becomes a 5-minute summary. A 3-hour course becomes nineteen
 </tr>
 </table>
 
+## Install
+
+**As a Claude Code plugin** (recommended, updates with `/plugin`):
+
+```text
+/plugin marketplace add Shalaby-VBS/tube-scholar
+/plugin install tube-scholar@tube-scholar
+```
+
+**Or as a plain skill:**
+
+```bash
+git clone https://github.com/Shalaby-VBS/tube-scholar.git
+cp -R tube-scholar/skills/tube-scholar ~/.claude/skills/
+```
+
+Then install the one hard dependency:
+
+```bash
+brew install yt-dlp        # or: pipx install yt-dlp
+```
+
 ## Quick start
 
-**1. Install the skill**
-
-```bash
-git clone https://github.com/Shalaby-VBS/tube-scholar.git ~/.claude/skills/tube-scholar
-```
-
-**2. Install the one hard dependency**
-
-```bash
-brew install yt-dlp
-```
-
-**3. Give Claude Code a link**
+Give Claude Code a link:
 
 ```text
 /tube-scholar https://www.youtube.com/watch?v=VIDEO_ID
@@ -247,7 +263,7 @@ Every component follows light and dark themes, flips correctly in right-to-left 
 
 ### Output
 
-Every video gets its own folder under `~/Downloads/yt-grab/`:
+Every video gets its own folder under `~/Downloads/tube-scholar/`:
 
 ```text
 <video title>/
@@ -282,25 +298,30 @@ Every video gets its own folder under `~/Downloads/yt-grab/`:
 
 | Script | Job |
 |---|---|
-| [`vtt2txt.py`](scripts/vtt2txt.py) | Auto-captions to clean, de-duplicated paragraphs |
-| [`fetch_meta.py`](scripts/fetch_meta.py) | Metadata, thumbnail, channel avatar and banner, related videos |
-| [`resolve_ts.py`](scripts/resolve_ts.py) | `[[ts: spoken words]]` markers to timestamp links; fails on words never said |
-| [`build_guide.py`](scripts/build_guide.py) | The bilingual page from the Markdown, the cards and `guide.json` |
-| [`preview_guide.py`](scripts/preview_guide.py) | Screenshots plus overflow and Mermaid checks; exits non-zero on a problem |
-| [`cheatsheet.py`](scripts/cheatsheet.py) | An A4 cheat-sheet PDF per language |
-| [`build_hub.py`](scripts/build_hub.py) | The playlist hub page |
+| [`vtt2txt.py`](skills/tube-scholar/scripts/vtt2txt.py) | Auto-captions to clean, de-duplicated paragraphs |
+| [`fetch_meta.py`](skills/tube-scholar/scripts/fetch_meta.py) | Metadata, thumbnail, channel avatar and banner, related videos |
+| [`resolve_ts.py`](skills/tube-scholar/scripts/resolve_ts.py) | `[[ts: spoken words]]` markers to timestamp links; fails on words never said |
+| [`build_guide.py`](skills/tube-scholar/scripts/build_guide.py) | The bilingual page from the Markdown, the cards and `guide.json` |
+| [`preview_guide.py`](skills/tube-scholar/scripts/preview_guide.py) | Screenshots plus overflow and Mermaid checks; exits non-zero on a problem |
+| [`cheatsheet.py`](skills/tube-scholar/scripts/cheatsheet.py) | An A4 cheat-sheet PDF per language |
+| [`build_hub.py`](skills/tube-scholar/scripts/build_hub.py) | The playlist hub page |
 
 ### Repository layout
 
 ```text
 tube-scholar/
-├── SKILL.md                      what Claude follows, step by step
-├── references/
-│   ├── guide-format.md           the file contract and the quality bar
-│   └── fact-check-brief.md       the brief for the independent audit agent
-├── scripts/                      the pipeline above
-├── assets/                       page template, styles and behaviour
-└── docs/                         README images
+├── .claude-plugin/
+│   ├── plugin.json               plugin manifest
+│   └── marketplace.json          lets `/plugin marketplace add` find it
+├── skills/tube-scholar/
+│   ├── SKILL.md                  what Claude follows, step by step
+│   ├── references/
+│   │   ├── guide-format.md       the file contract and the quality bar
+│   │   └── fact-check-brief.md   the brief for the independent audit agent
+│   ├── scripts/                  the pipeline above
+│   └── assets/                   page template, styles and behaviour
+├── tests/                        end-to-end tests on a bilingual fixture
+└── docs/                         README images and the live demo
 ```
 
 ## FAQ
@@ -341,10 +362,20 @@ Yes. Edit the <code>.md</code>, <code>cards.*.txt</code> or <code>guide.json</co
 Guides are unofficial study notes. Each page credits the speaker and the channel, keeps their disclaimers, labels sponsored segments and links back to the original video.
 </details>
 
+<details>
+<summary><b>Does it run on Linux or Windows?</b></summary>
+<br>
+The scripts are plain Python and run anywhere; CI runs them on Ubuntu. Two conveniences are macOS-only and skip themselves elsewhere: shrinking images with <code>sips</code> and reading PDF thumbnails. The preview and cheat sheet need Google Chrome or Chromium on PATH.
+</details>
+
+## Contributing
+
+Bug reports, ideas and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the setup, the tests and the ground rules, and see [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
+
 ## Acknowledgements
 
 Built on [yt-dlp](https://github.com/yt-dlp/yt-dlp), [Python-Markdown](https://github.com/Python-Markdown/markdown) and [Mermaid](https://mermaid.js.org/), set in [IBM Plex](https://www.ibm.com/plex/) and [Noto Kufi Arabic](https://fonts.google.com/noto/specimen/Noto+Kufi+Arabic).
 
 ## License
 
-Released under the [MIT License](LICENSE).
+Released under the [MIT License](LICENSE). Generated guides are unofficial study notes; the videos, thumbnails and channel art belong to their creators.

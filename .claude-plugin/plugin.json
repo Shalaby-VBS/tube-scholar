@@ -1,0 +1,10 @@
+{
+  "name": "tube-scholar",
+  "version": "1.0.0",
+  "description": "Turn any YouTube video into a bilingual (Arabic/English) study guide: timestamped explanation, 5-minute summary, animated concept visuals, scenario quiz, spaced-repetition flashcards, fact-checked against the transcript.",
+  "author": { "name": "Shalaby-VBS", "url": "https://github.com/Shalaby-VBS" },
+  "homepage": "https://github.com/Shalaby-VBS/tube-scholar",
+  "repository": "https://github.com/Shalaby-VBS/tube-scholar",
+  "license": "MIT",
+  "keywords": ["youtube", "study-guide", "flashcards", "spaced-repetition", "transcript", "learning", "arabic", "yt-dlp"]
+}

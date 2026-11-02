@@ -8,7 +8,7 @@ You are auditing a study guide against the video transcript it was written from.
 
 Folder: `<DIR>`
 - Transcript: the `.txt` file next to the `.vtt` (auto-captions: expect misspellings like "highle" for "high-level").
-- Guide: `guide.ar.md` (the source edition) and `guide.en.md` (its translation). Contract: `~/.claude/skills/tube-scholar/references/guide-format.md`.
+- Guide: `guide.ar.md` (the source edition) and `guide.en.md` (its translation). Contract: `$SKILL/references/guide-format.md`.
 - Flashcards: `cards.ar.txt`, `cards.en.txt`.
 
 Check every one of these in `guide.en.md` (it mirrors the Arabic line by line, so findings apply to both):

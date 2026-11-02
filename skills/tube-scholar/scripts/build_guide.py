@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Build a bilingual study-guide page (one self-contained HTML file) for a YouTube video.
 
-Usage: build_guide.py <guide-dir> [--out <file.html>]
+Usage: build_guide.py <guide-dir> [--out <file.html>] [--standalone]
+
+--standalone adds the document skeleton and the Mermaid library, for hosting the page
+anywhere other than claude.ai (which renders Mermaid itself), e.g. GitHub Pages.
 
 <guide-dir> holds (see references/guide-format.md):
   guide.json              page copy: langs, titles, resources, socials
@@ -410,7 +413,7 @@ def place_chapters(chapters, md, cmap):
     return [{**c, 'start_time': heads[cmap[c['title']]]} if c['title'] in cmap else c for c in chapters]
 
 
-def build(gdir, out):
+def build(gdir, out, standalone=False):
     G = json.loads((gdir / 'guide.json').read_text())
     V = json.loads((gdir / 'meta/video.json').read_text())
     related = json.loads((gdir / 'meta/related.json').read_text()) if (gdir / 'meta/related.json').exists() else []
@@ -522,6 +525,11 @@ def build(gdir, out):
             + '\n'.join(wraps)
             + '\n<button class="totop" id="totop" type="button" aria-label="Back to top">↑</button>\n<script>\n'
             + (ASSETS / 'guide.js').read_text().replace('%%DATA%%', json.dumps(data, ensure_ascii=False)) + '</script>\n')
+    if standalone:  # outside claude.ai: own skeleton + mermaid
+        page = (f'<!doctype html>\n<html lang="{langs[0]}">\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n'
+                '<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>\n' + page
+                + '<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>\n'
+                  "<script>mermaid.initialize({startOnLoad:true,theme:matchMedia('(prefers-color-scheme: dark)').matches?'dark':'default'})</script>\n</html>\n")
     left = re.findall(r'%%[A-Za-z0-9_]+%%', page)
     if left:
         sys.exit(f'unfilled placeholders: {sorted(set(left))}')
@@ -534,4 +542,4 @@ if __name__ == '__main__':
         sys.exit(__doc__)
     gdir = Path(sys.argv[1]).expanduser().resolve()
     out = Path(sys.argv[sys.argv.index('--out') + 1]) if '--out' in sys.argv else gdir / 'guide.html'
-    build(gdir, out)
+    build(gdir, out, '--standalone' in sys.argv)
