@@ -4,8 +4,6 @@
 
 Tube Scholar is a [Claude Code](https://claude.com/claude-code) skill. Give it a video and it reads the whole transcript, writes an academic explanation of everything the speaker teaches in Arabic and English, checks it against the transcript with an independent agent, and publishes a single interactive page: a 5-minute summary, every section linked to its exact minute in the video, animated concept diagrams, a scenario quiz, glossary tooltips and spaced-repetition flashcards.
 
-> **بالعربي:** ابعت لينك أي فيديو على YouTube، وهتاخد صفحة مذاكرة كاملة بالعربي والإنجليزي: خلاصة في 5 دقايق، وشرح لكل جزء مربوط بالدقيقة بتاعته في الفيديو، ورسومات متحركة، وأسئلة سيناريو، و Flashcards بتفتكرك. كل رقم وكل معلومة متراجعة على كلام المتحدث نفسه.
-
 ![The English edition of a generated guide](docs/guide-desktop-en.png)
 
 ## What you get for every video
@@ -66,10 +64,10 @@ A bare video link builds the full study guide. Other requests switch mode:
 
 | You say | You get |
 |---|---|
-| a video link, "explain", "study guide", "اشرحلي الفيديو" | the study guide (default) |
-| "subtitles", "transcript", "هات الترجمة" | `.vtt` subtitles plus a clean `.txt` transcript |
-| "audio", "mp3", "هات الصوت بس" | MP3 |
-| "download the video", "نزّل الفيديو" | MP4 up to 1080p |
+| a video link, "explain", "study guide" | the study guide (default) |
+| "subtitles", "transcript" | `.vtt` subtitles plus a clean `.txt` transcript |
+| "audio", "mp3" | MP3 |
+| "download the video" | MP4 up to 1080p |
 | a playlist or channel link | subtitles for every item; ask for guides to get one per video plus a hub page |
 
 Everything lands in `~/Downloads/yt-grab/<video title>/`:
