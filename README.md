@@ -11,6 +11,7 @@
 [![Languages](https://img.shields.io/badge/guides-Arabic_%2B_English-13202A?style=flat-square)](#what-you-get)
 
 **[What you get](#what-you-get)** ·
+**[Tour](#a-tour-of-a-guide)** ·
 **[Quick start](#quick-start)** ·
 **[How it works](#how-it-works)** ·
 **[Accuracy](#how-it-stays-accurate)** ·
@@ -27,7 +28,7 @@ Tube Scholar is a [Claude Code](https://claude.com/claude-code) skill that turns
 A 38-minute lecture becomes a 5-minute summary. A 3-hour course becomes nineteen sections you can skim, search, quiz yourself on and jump back into the video from, at the exact minute.
 
 <div align="center">
-<img src="docs/guide-desktop-en.png" alt="The English edition of a generated study guide" width="92%">
+<img src="docs/hero.png" alt="The top of a generated study guide: video, stats, channel card and title" width="100%">
 </div>
 
 ## What you get
@@ -73,13 +74,30 @@ A 38-minute lecture becomes a 5-minute summary. A 3-hour course becomes nineteen
 </tr>
 </table>
 
-<div align="center">
-<img src="docs/guide-desktop-ar.png" alt="Arabic edition on desktop" width="64%">
-&nbsp;
-<img src="docs/guide-phone-ar.png" alt="Arabic edition on a phone, dark theme" width="27%">
-<br>
-<sub>The Arabic edition, right-to-left, on desktop and on a phone in dark mode.</sub>
-</div>
+## A tour of a guide
+
+<table>
+<tr>
+<td width="50%" valign="top" align="center">
+<img src="docs/summary.png" alt="The 5-minute summary">
+<br><sub><b>The 5-minute summary.</b> Ten linked points, glossary terms underlined, and the quick-mode switch.</sub>
+</td>
+<td width="50%" valign="top" align="center">
+<img src="docs/section.png" alt="A guide section">
+<br><sub><b>A section.</b> Level colour, reading time, a link to the minute in the video, and the key takeaways first.</sub>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top" align="center">
+<img src="docs/quiz.png" alt="Scenario questions">
+<br><sub><b>Scenario questions.</b> Pick an answer to see why, with a running score and difficulty levels.</sub>
+</td>
+<td width="50%" valign="top" align="center">
+<img src="docs/flashcards.png" alt="Flashcards">
+<br><sub><b>Flashcards.</b> Filter by topic and level; "Got it" and "Again" drive the spaced-repetition schedule.</sub>
+</td>
+</tr>
+</table>
 
 ## Quick start
 
@@ -149,7 +167,7 @@ A study guide is only useful if you can trust it. Every guide goes through four 
 Ideas that have a shape get an animated, theme-aware component instead of a plain table. Each one is a fenced block in the guide's Markdown.
 
 <div align="center">
-<img src="docs/concept-visuals.png" alt="Timeline, calc and spectrum components in Arabic and English" width="70%">
+<img src="docs/visuals.png" alt="Timeline, calc and spectrum components" width="72%">
 </div>
 
 <table>
@@ -243,13 +261,22 @@ Every video gets its own folder under `~/Downloads/yt-grab/`:
 └── preview/                      pre-publish screenshots
 ```
 
-<div align="center">
-<img src="docs/playlist-hub.png" alt="Playlist hub page" width="58%">
-&nbsp;
-<img src="docs/cheatsheet-ar.png" alt="Arabic cheat-sheet PDF" width="33%">
-<br>
-<sub>A playlist hub with progress across videos, and the cheat-sheet PDF.</sub>
-</div>
+<table>
+<tr>
+<td width="44%" valign="top" align="center">
+<img src="docs/hub.png" alt="Playlist hub page">
+<br><sub><b>Playlist hub.</b> Every video's guide in one place, with progress across them.</sub>
+</td>
+<td width="28%" valign="top" align="center">
+<img src="docs/cheatsheet.png" alt="Cheat-sheet PDF">
+<br><sub><b>Cheat sheet.</b> A4 PDF with the summary, decisions, maths and glossary.</sub>
+</td>
+<td width="28%" valign="top" align="center">
+<img src="docs/phone.png" alt="A guide on a phone in dark mode">
+<br><sub><b>On a phone.</b> Responsive, with light and dark themes.</sub>
+</td>
+</tr>
+</table>
 
 ### Scripts
 
