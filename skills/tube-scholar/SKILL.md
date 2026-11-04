@@ -1,6 +1,6 @@
 ---
 name: tube-scholar
-description: Turn any YouTube video into a bilingual (Arabic/English) study guide published as an interactive page — a 5-minute summary and decision table, an academic explanation with every section linked to its minute in the video, animated concept visuals, scenario quiz, glossary tooltips, spaced-repetition flashcards, an independent fact-check and a cheat-sheet PDF; a playlist gets a hub page. Also pulls plain subtitles/transcripts, audio or video for a video, playlist or channel. Use when the user pastes a YouTube link, wants a video explained, summarized for learning, turned into notes, a study guide, flashcards or a quiz ("اشرحلي الفيديو", "اعمل شرح للفيديو ده", "study guide", "لخصلي الفيديو للمذاكرة"), or asks for a transcript, subtitles, captions, audio or a download from YouTube ("هات الترجمة", "نزّل الـ subtitles", "عاوز الـ transcript", "نزّل البلاي ليست", "هات الصوت بس", "/tube-scholar").
+description: Turn any YouTube video into a bilingual (Arabic/English) study guide published as an interactive page — a 5-minute summary and decision table, an academic explanation with every section linked to its minute in the video, animated concept visuals, scenario quiz, glossary tooltips, spaced-repetition flashcards, an independent fact-check and a cheat-sheet PDF; a whole playlist becomes one long course page with every video's full guide. Also pulls plain subtitles/transcripts, audio or video for a video, playlist or channel. Use when the user pastes a YouTube link, wants a video explained, summarized for learning, turned into notes, a study guide, flashcards or a quiz ("اشرحلي الفيديو", "اعمل شرح للفيديو ده", "study guide", "لخصلي الفيديو للمذاكرة"), or asks for a transcript, subtitles, captions, audio or a download from YouTube ("هات الترجمة", "نزّل الـ subtitles", "عاوز الـ transcript", "نزّل البلاي ليست", "هات الصوت بس", "/tube-scholar").
 ---
 
 # Tube Scholar
@@ -14,7 +14,8 @@ Turn a YouTube link into something to learn from: by default a full study-guide 
 | User wants | Mode |
 |---|---|
 | a single-video link with no other words, "اشرح", "شرح", "explain", "study guide", "flashcards", "quiz", "للمذاكرة" | **study** (default for one video; runs subs first, then §7) |
-| "ترجمة", "subtitles", "transcript", "captions" only, or a playlist/channel link with no other words | **subs** |
+| a playlist link (`list=`) with no other words, "البلاي ليست كلها", "كورس", "course" | **course** (study mode for every video, then one course page, §7c) |
+| "ترجمة", "subtitles", "transcript", "captions" only, or a channel link with no other words | **subs** |
 | "صوت", "audio", "mp3", "podcast" | **audio** |
 | "فيديو", "download the video", "نزّل الفيديو" | **video** |
 
@@ -32,7 +33,7 @@ command -v ffmpeg >/dev/null || brew install ffmpeg   # audio/video modes only
 yt-dlp --flat-playlist --print "%(playlist_index)s %(title)s" "<URL>" 2>&1 | head -60
 ```
 
-The listing gives the item count and the playlist/video title to name the folder. Playlists over ~50 items in **video** mode: state the count and ask before downloading.
+The listing gives the item count and the playlist/video title to name the folder. Playlists over ~50 items in **video** mode, or over ~25 in **course** mode (each video is a full guide; the page cap is 16 MB, ~0.55 MB per video): state the count and ask before starting.
 
 ## 3. Output folder
 
@@ -85,11 +86,7 @@ Writes a `.txt` next to each `.vtt`: no timestamps, no tags, no repeated lines, 
 
 Turns one video into a guide someone can learn from without watching: an academic explanation per topic, each linked to its minute in the video, plus a 5-minute summary, quick mode, scenario quiz and flashcards, in Arabic and English, as one artifact page. Read `references/guide-format.md` before writing anything; it is the file contract and the quality bar.
 
-A playlist gets one guide per video only when the user asks; otherwise ask which video. For a playlist or course series, build each video's guide in order (§7 per video, one folder each), then one hub page that links them all with per-video progress:
-```bash
-~/.cache/tube-scholar/venv/bin/python $SKILL/scripts/build_hub.py "<playlist-dir>/hub.html" "<playlist title>" "<video-dir-1>" "<video-dir-2>" ...
-```
-Preview it (step 7) and publish it like a guide.
+A playlist link is **course** mode (§7c): every video gets the full treatment below, and all of them land on one page.
 
 1. **Subs + transcript** (§4 subs, §5 clean text) into the video's folder. That folder is `<dir>` below.
 2. **Metadata and images.** Pick up to three related videos the description recommends; when it recommends none, search the speaker's own related videos instead (`--related-search "<speaker> <topic>"`, or list them with `yt-dlp --flat-playlist --print "%(id)s|%(title)s" "ytsearch8:<query>"` and pass the best three as `--related`, skipping re-uploads of this same course):
@@ -116,10 +113,29 @@ Preview it (step 7) and publish it like a guide.
    ```
    Read the three PNGs in `<dir>/preview/`. Fix anything broken (overflow, clipped or overlapping text, wrong colours, an empty area) in the `.md`/`guide.json` or the skill's assets, rebuild, and preview once more. Never publish with the overflow check failing.
 7b. **Cheat sheet PDF**: `python3 -I $SKILL/scripts/cheatsheet.py "<dir>"` writes `cheatsheet.<lang>.pdf` (summary, decision table, every calc/timeline/visual, glossary) next to the guide.
-8. **Publish** `<dir>/guide.html` with the Artifact tool (quickstart `intent: "other"` first; on later rebuilds republish the same path). The page embeds its images, so it works from the link alone. Save the artifact link into `guide.json` as `"artifact_url"` (the playlist hub needs it).
+8. **Publish** `<dir>/guide.html` with the Artifact tool (quickstart `intent: "other"` first; on later rebuilds republish the same path). The page embeds its images, so it works from the link alone. Save the artifact link into `guide.json` as `"artifact_url"` (a playlist hub needs it).
 9. **Report**: the link, the folder, what each file is, and which accuracy items are explainer additions.
 
 Rebuilds after edits: change the `.md`/`.txt`/`guide.json`, rerun steps 5–8. Never edit `guide.html` by hand; it is regenerated.
+
+### 7c. Course mode (a whole playlist on one page)
+
+The quality bar per video is exactly §7: nothing is shortened because the page is long.
+
+1. **Subs for the whole list** in one run (§4 subs with the playlist template) into `~/Downloads/tube-scholar/<Playlist>/`, then §5. Make one folder per video, `<Playlist>/NN - <short title>/`, and move that video's `.vtt`/`.txt` into it. Skip removed/private items and list them in the report.
+2. **Per video, in playlist order:** §7 steps 2–7b on its folder (meta, read the whole transcript, both guides, cards, `guide.json`, resolve timestamps, preview, cheat sheet). Fact-check (step 5b) runs one fresh background agent per video; start each as soon as that video's guide is written, so it overlaps with writing the next one. Do not publish the single-video pages.
+3. **Build the course page:**
+   ```bash
+   ~/.cache/tube-scholar/venv/bin/python $SKILL/scripts/build_course.py "<playlist-dir>/course.html" "<playlist title>" "<video-dir-1>" "<video-dir-2>" ...
+   ```
+   One page: a course header (totals and an index of every video), then each video's complete guide in order. One language switch flips every video; progress and flashcard reviews stay per video. It warns past 15 MB: split the list into two course pages (part 1, part 2) and say so.
+4. **Check and preview** `course.html` as in steps 6–7 (`node --check`, duplicate ids, the preview script). Fix in the video's `.md`/`guide.json`, rerun the course build.
+5. **Publish** `course.html` (Artifact, quickstart `intent: "other"` first) and report the link, the playlist folder, the per-video cheat sheets, skipped videos, and the explainer additions per video.
+
+Wanting separate pages instead ("صفحة لكل فيديو"): publish each `guide.html`, save its `artifact_url`, and link them with a hub:
+```bash
+~/.cache/tube-scholar/venv/bin/python $SKILL/scripts/build_hub.py "<playlist-dir>/hub.html" "<playlist title>" "<video-dir-1>" "<video-dir-2>" ...
+```
 
 ## Gotchas
 

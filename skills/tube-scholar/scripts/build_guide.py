@@ -13,7 +13,7 @@ anywhere other than claude.ai (which renders Mermaid itself), e.g. GitHub Pages.
   meta/                   written by fetch_meta.py (video.json, images, related.json)
 Needs the `markdown` package: run it with the venv python from SKILL.md.
 """
-import base64, html, json, math, re, sys
+import base64, collections, html, json, math, re, sys
 from datetime import date
 from pathlib import Path
 
@@ -413,7 +413,9 @@ def place_chapters(chapters, md, cmap):
     return [{**c, 'start_time': heads[cmap[c['title']]]} if c['title'] in cmap else c for c in chapters]
 
 
-def build(gdir, out, standalone=False):
+def render_wraps(gdir, vp=''):
+    """One `.wrap` per language for the guide in gdir, plus its JS data. vp prefixes every id, so several
+    guides can share one page (build_course.py); the guide alone uses vp=''."""
     G = json.loads((gdir / 'guide.json').read_text())
     V = json.loads((gdir / 'meta/video.json').read_text())
     related = json.loads((gdir / 'meta/related.json').read_text()) if (gdir / 'meta/related.json').exists() else []
@@ -427,7 +429,7 @@ def build(gdir, out, standalone=False):
     tpl = (ASSETS / 'wrap.html').read_text()
     wraps, data = [], {'id': vid, 'langs': langs}
     for ix, lang in enumerate(langs):
-        U = UI[lang]; iso = bidi if lang in RTL else (lambda h: h); P = '' if ix == 0 else f'{lang}-'
+        U = {**UI[lang], **G.get('ui', {}).get(lang, {})}; iso = bidi if lang in RTL else (lambda h: h); P = vp + ('' if ix == 0 else f'{lang}-')
         tldr, body, toc = render_body((gdir / f'guide.{lang}.md').read_text(), lang)
         cards = []
         cfile = gdir / f'cards.{lang}.txt'
@@ -488,7 +490,7 @@ def build(gdir, out, standalone=False):
                     f'<a class="lnk" href="{html.escape(s["url"])}" target="_blank" rel="noopener">{iso(html.escape(s["label"]))}</a>' for s in G['socials']) + '</div>'
             res += '</section>'
         foot = U['footer'].format(u=vurl, t=html.escape(V['title']), c=html.escape(V.get('channel', '')), d=fmt_date(today, lang)) + G.get('footer_extra', {}).get(lang, '')
-        tags_html = ''.join(f'<span>#{re.sub(r"[^A-Za-z0-9]", "", t.title() if " " in t else t)}</span>' for t in (G.get('tags') or V.get('tags') or [])[:5])
+        tags_html = ''.join(f'<span>#{"".join(ch for ch in (t.title() if " " in t else t) if ch.isalnum() or ch == "_")}</span>' for t in (G.get('tags') or V.get('tags') or [])[:5])
         verified = ('<svg width="15" height="15" viewBox="0 0 24 24" role="img" aria-label="verified"><circle cx="12" cy="12" r="10" fill="var(--muted)"/>'
                     '<path d="M7.5 12.3l3 3 6-6.3" fill="none" stroke="var(--surface)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>') if V.get('channel_is_verified') else ''
         handle = ' · '.join(x for x in (V.get('uploader_id') or '', f'{compact(V.get("channel_follower_count"))} subscribers' if V.get('channel_follower_count') else '') if x)
@@ -509,22 +511,30 @@ def build(gdir, out, standalone=False):
                       anki=iso(U['anki'].format(f=cfile.name)))
         w = re.sub(r'%%T_(\w+)%%', lambda m: t_keys[m[1]], tpl)
         w = re.sub(r'%%([A-Z0-9_]+)%%', lambda m: rep[m[1]], w)
-        if P:  # unique ids per edition; data-id stays shared so progress is shared
+        if P:  # unique ids per edition (and per video on a course page); data-id stays shared so progress is shared
             w = re.sub(r'(?<![\w-])id="([^"]+)"', rf'id="{P}\1"', w)
             w = re.sub(r'href="#([^"]+)"', rf'href="#{P}\1"', w)
             w = re.sub(r'url\(#([^)]+)\)', rf'url(#{P}\1)', w)
         wraps.append(w)
+    data['vp'] = vp
+    return wraps, data, G, langs
+
+
+def page_html(title, langs, inner, data, standalone=False):
+    """The page around one guide's wraps or a whole course: fonts, CSS, language switch, script.
+    data is one guide's data dict, or a list of them for a course page."""
     sw = ''
     if len(langs) > 1:
         sw = '<div class="langsw" role="group" aria-label="Language">' + ''.join(
             f'<button type="button" data-l="{l}" lang="{l}" aria-pressed="{str(i == 0).lower()}">{LANG_LABEL.get(l, l)}</button>' for i, l in enumerate(langs)) + '</div>'
-    page = (f'<title>{html.escape(G["page_title"])}</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n'
+    page = (f'<title>{html.escape(title)}</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n'
             '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
             '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@500;700;800&display=swap">\n'
             f'<style>\n{(ASSETS / "guide.css").read_text()}</style>\n<div class="progress" aria-hidden="true"><i id="prog"></i></div>\n{sw}\n'
-            + '\n'.join(wraps)
+            + inner
             + '\n<button class="totop" id="totop" type="button" aria-label="Back to top">↑</button>\n<script>\n'
             + (ASSETS / 'guide.js').read_text().replace('%%DATA%%', json.dumps(data, ensure_ascii=False)) + '</script>\n')
+    page = dedupe_images(page)
     if standalone:  # outside claude.ai: own skeleton + mermaid
         page = (f'<!doctype html>\n<html lang="{langs[0]}">\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n'
                 '<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>\n' + page
@@ -533,6 +543,27 @@ def build(gdir, out, standalone=False):
     left = re.findall(r'%%[A-Za-z0-9_]+%%', page)
     if left:
         sys.exit(f'unfilled placeholders: {sorted(set(left))}')
+    return page
+
+
+def dedupe_images(page):
+    """Store each embedded image once: the avatar, thumbnail and banner repeat in every language edition
+    (and every video of a course), which tripled the page size. Repeats become data-ti / data-tbg keys."""
+    uris = re.findall(r'data:image/[a-z]+;base64,[A-Za-z0-9+/=]+', page)
+    rep = [u for u, c in collections.Counter(uris).items() if c > 1]
+    if not rep:
+        return page
+    key = {u: str(i) for i, u in enumerate(rep)}
+    page = re.sub(r'src="(data:image/[^"]+)"', lambda m: f'data-ti="{key[m[1]]}"' if m[1] in key else m[0], page)
+    page = re.sub(r'style="background-image:url\(\'(data:image/[^\']+)\'\)"', lambda m: f'data-tbg="{key[m[1]]}"' if m[1] in key else m[0], page)
+    return page + ('<script>(function(){var I=' + json.dumps(rep) + ';'
+                   "document.querySelectorAll('[data-ti]').forEach(function(e){e.src=I[e.dataset.ti]});"
+                   "document.querySelectorAll('[data-tbg]').forEach(function(e){e.style.backgroundImage='url('+I[e.dataset.tbg]+')'})})();</script>\n")
+
+
+def build(gdir, out, standalone=False):
+    wraps, data, G, langs = render_wraps(gdir)
+    page = page_html(G['page_title'], langs, '\n'.join(wraps), data, standalone)
     out.write_text(page)
     print(f'{out}  {len(page) // 1024} KB  langs={",".join(langs)}  cards={[len(data[l]["cards"]) for l in langs]}')
 

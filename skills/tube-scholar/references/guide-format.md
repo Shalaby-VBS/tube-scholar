@@ -45,6 +45,7 @@ Languages supported by the builder: `ar` (RTL) and `en`. The first language in `
 - `resources`: only links from the video description that teach something (docs, courses, papers, tools named in the talk). Skip affiliate, coaching, merch and newsletter links. Label a sponsor as a sponsor.
 - `footer_extra`: disclaimers the description states (personal views, paid sponsorship).
 - `chapter_map`: `{"<chapter title exactly as in meta/video.json>": "<heading number>"}`, e.g. `"API Design": "5"` or `"Search at Scale": "10.4"`. Description chapter times are typed by hand and often drift from the speech (sometimes by minutes); mapping each chapter to the guide heading where that topic starts gives it that heading's caption-accurate ▶️ time. Map every chapter whose description time is more than ~15 s off. `show_chapters: false` hides the list entirely.
+- `ui`: `{"<lang>": {"<key>": "text"}}` overrides page strings from `build_guide.py`'s `UI` table, e.g. `search` (the search hint, which names a tech term by default) or `lead2` (says terms stay in English). Use it when the video is not a tech talk.
 - Every key except `page_title`, `langs`, `h1`, `sub` is optional.
 
 ## guide.<lang>.md

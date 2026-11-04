@@ -1,10 +1,14 @@
 (function(){
-  var DATA=%%DATA%%;
+  // one guide's data, or a list of them on a course page (build_course.py): each guide lives in its own box, ids prefixed by vp
+  var LIST=%%DATA%%; if(!Array.isArray(LIST)) LIST=[LIST];
   var RM=matchMedia('(prefers-reduced-motion: reduce)');
   var small=matchMedia('(max-width:980px)');
   var each=function(list,fn){Array.prototype.forEach.call(list,fn)};
-  var roots={}; each(document.querySelectorAll('.wrap[data-lang]'),function(w){roots[w.dataset.lang]=w});
-  var PFX={}; DATA.langs.forEach(function(l,ix){PFX[l]=ix?l+'-':''});
+
+  function guide(DATA){
+  var VP=DATA.vp||'', box=DATA.box?document.getElementById(DATA.box):document;
+  var roots={}; each(box.querySelectorAll('.wrap[data-lang]'),function(w){roots[w.dataset.lang]=w});
+  var PFX={}; DATA.langs.forEach(function(l,ix){PFX[l]=VP+(ix?l+'-':'')});
 
   // shared state, kept only in this browser
   var KEY='ytguide-'+DATA.id, st={done:[],quick:false,lang:DATA.langs[0]};
@@ -185,33 +189,42 @@
       document.getElementById(P+'doneb').style.transform='scaleX('+(tot?n/tot:0)+')';
     });
   }
-  each(document.querySelectorAll('.done'),function(b){ b.addEventListener('click',function(){
+  each(box.querySelectorAll('.done'),function(b){ b.addEventListener('click',function(){
     var k=st.done.indexOf(b.dataset.id); if(k>-1) st.done.splice(k,1); else st.done.push(b.dataset.id); save(); paint();
   })});
-  each(document.querySelectorAll('.qbtn'),function(b){ b.addEventListener('click',function(){
+  each(box.querySelectorAll('.qbtn'),function(b){ b.addEventListener('click',function(){
     var anchor=b.closest('.sec')||b, y=anchor.getBoundingClientRect().top;
     st.quick=!st.quick; save(); paint(); scrollBy(0,anchor.getBoundingClientRect().top-y);
   })});
 
-  // language switch: show one edition, keep the reader on the same section
+  // the last heading above the fold in the shown edition, without its prefix
+  function anchor(){
+    var cur=roots[st.lang], a=null;
+    if(cur && !cur.hidden) each(cur.querySelectorAll('h2[id], section[id]'),function(h){ if(h.getBoundingClientRect().top<160) a=h.id.replace(PFX[st.lang],''); });
+    return a;
+  }
+  function show(lang){ if(!roots[lang]) lang=DATA.langs[0]; st.lang=lang; save(); Object.keys(roots).forEach(function(k){ roots[k].hidden=(k!==lang); }); }
+  return {st:st, PFX:PFX, anchor:anchor, show:show, init:function(){ Object.keys(roots).forEach(initLang); paint(); }};
+  }
+
+  // language switch: show one edition of every guide, keep the reader on the same section
+  var G=LIST.map(guide), lang0=G[0].st.lang;
   function setLang(lang,keep){
-    var cur=roots[st.lang], anchor=null;
-    if(keep && cur && !cur.hidden){
-      each(cur.querySelectorAll('h2[id], section[id]'),function(h){ if(h.getBoundingClientRect().top<160) anchor=h.id.replace(PFX[st.lang],''); });
-    }
-    st.lang=lang; save();
-    Object.keys(roots).forEach(function(k){ roots[k].hidden=(k!==lang); });
-    document.documentElement.lang=lang; document.documentElement.dir=roots[lang].getAttribute('dir');
+    var hit=null;
+    if(keep) G.forEach(function(g){ var a=g.anchor(); if(a) hit={g:g,id:a}; });  // guides are in page order: the last hit is the one being read
+    G.forEach(function(g){ g.show(lang); }); lang0=lang;
+    each(document.querySelectorAll('[data-course-lang]'),function(el){ el.hidden=el.dataset.courseLang!==lang; });
+    var w=document.querySelector('.wrap[data-lang="'+lang+'"]');
+    document.documentElement.lang=lang; if(w) document.documentElement.dir=w.getAttribute('dir');
     each(document.querySelectorAll('.langsw button'),function(b){b.setAttribute('aria-pressed',String(b.dataset.l===lang))});
     dispatchEvent(new Event('resize'));
-    if(anchor){ var t=document.getElementById(PFX[lang]+anchor); if(t) t.scrollIntoView({block:'start',behavior:'instant'}); }
+    if(hit){ var t=document.getElementById(hit.g.PFX[lang]+hit.id); if(t) t.scrollIntoView({block:'start',behavior:'instant'}); }
     else if(keep) scrollTo({top:0,behavior:'instant'});
   }
-  each(document.querySelectorAll('.langsw button'),function(b){ b.addEventListener('click',function(){ if(b.dataset.l!==st.lang) setLang(b.dataset.l,true); }); });
+  each(document.querySelectorAll('.langsw button'),function(b){ b.addEventListener('click',function(){ if(b.dataset.l!==lang0) setLang(b.dataset.l,true); }); });
 
-  setLang(st.lang,false);
-  Object.keys(roots).forEach(initLang);
-  paint();
+  setLang(lang0,false);
+  G.forEach(function(g){ g.init(); });
 
   // reading progress + back to top
   var prog=document.getElementById('prog'), top=document.getElementById('totop');

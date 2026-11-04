@@ -7,7 +7,7 @@
       "name": "tube-scholar",
       "source": "./",
       "description": "Turn any YouTube video into a bilingual (Arabic/English) study guide: timestamped explanation, 5-minute summary, animated concept visuals, scenario quiz and spaced-repetition flashcards.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "category": "productivity",
       "keywords": ["youtube", "study-guide", "flashcards", "learning", "arabic"]
     }

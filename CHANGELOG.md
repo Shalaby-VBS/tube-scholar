@@ -2,6 +2,15 @@
 
 All notable changes to Tube Scholar. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-11-04
+
+### Added
+- **Course mode**: a playlist link builds every video's full study guide and stacks them on one long page (`build_course.py`), with a course header, totals and a video index. One language switch flips every video; progress and flashcard reviews stay per video.
+
+### Changed
+- Embedded images are stored once per page, so a single guide is about 30% smaller and a course page about 55% smaller.
+- `build_guide.py` exposes `render_wraps()` and `page_html()` for reuse.
+
 ## [1.0.0] - 2026-11-02
 
 First public release.
