@@ -2,6 +2,13 @@
 
 All notable changes to Tube Scholar. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.2.1] - 2026-11-05
+
+### Fixed
+- A Udemy lecture link gave the whole course's (empty) metadata; `fetch_meta.py` now finds that lecture in the course and fetches only it, and uses the link itself as the page URL.
+- `fetch_meta.py --channel` and `--lang` fill what Udemy leaves out (no instructor, Arabic captions labelled `en`).
+- Sites with no counts, publish date or duration no longer show an empty stats box, "—" date or duration badge.
+
 ## [1.2.0] - 2026-11-05
 
 ### Added

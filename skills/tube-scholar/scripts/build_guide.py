@@ -467,7 +467,7 @@ def render_wraps(gdir, vp=''):
 
         stats = (''.join(f'<div><b>{compact(V[k])}</b><span>{U[u]}</span></div>' for k, u in (('view_count', 'views'), ('like_count', 'likes'), ('comment_count', 'comments'))
                          if V.get(k) is not None)  # course sites publish no counts; show only what the site gave
-                 + f'<div><b class="ar">{fmt_date(pub, lang) if pub else "—"}</b><span>{U["published"]}</span></div>')
+                 + (f'<div><b class="ar">{fmt_date(pub, lang)}</b><span>{U["published"]}</span></div>' if pub else ''))
         n_sec = sum(1 for i, _, _ in toc if i.startswith('sec-'))
         facts = (f'<span><b>{len(chapters)}</b> {U["f_ch"]}</span>' if chapters else '') + f'<span><b>{n_sec}</b> {U["f_sec"]}</span><span><b>{len(cards)}</b> {U["f_cards"]}</span>'
         ch_sec = ''
@@ -507,7 +507,7 @@ def render_wraps(gdir, vp=''):
             'CHANNEL_URL': html.escape(V.get('channel_url') or vurl), 'TAGS': tags_html, 'NAV': nav, 'TLDR': tldr, 'CHAPTERS_SECTION': ch_sec, 'BODY': body,
             'RESOURCES_SECTION': res, 'FOOTER': foot,
         }
-        t_keys = dict(play=U['play'].format(p=site), thumb_alt=U['thumb_alt'], asof=U['asof'].format(p=site, d=fmt_date(today, lang)), watch=U['watch'], channel=U['channel'].format(p=site),
+        t_keys = dict(play=U['play'].format(p=site), thumb_alt=U['thumb_alt'], asof=U['asof'].format(p=site, d=fmt_date(today, lang)) if V.get('view_count') is not None else '', watch=U['watch'], channel=U['channel'].format(p=site),
                       sections=U['sections'], in_guide=U['in_guide'], progress=U['progress'], quick=U['quick'], how=U['how'], quick_note=U['quick_note'],
                       lead1=U['lead1'], lead2=U['lead2'] if len(langs) > 1 or lang in RTL else '', cards_lvl=U['cards_lvl'], cards_h=U['nav_cards'],
                       cards_sm=U['cards_sm'], search=U['search'], filter=U['filter'], prev=U['prev'], next=U['next'], know=U['know'], again=U['again'], shuffle=U['shuffle'],

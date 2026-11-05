@@ -141,7 +141,7 @@ Wanting separate pages instead ("صفحة لكل فيديو"): publish each `gui
 
 Everything in §7 and §7c stays the same; only steps 1 and 2 (subtitles and metadata) change.
 
-1. **yt-dlp reads the site** (`yt-dlp --list-extractors | grep -i <site>`: TED, Vimeo, Khan Academy, Udemy, LinkedIn Learning, Pluralsight, ...): run §4 subs and `fetch_meta.py` as usual. Sites that need a login (Udemy, LinkedIn Learning, Pluralsight, most of Vimeo) take `--cookies-from-browser chrome`, on yt-dlp and on `fetch_meta.py`. Related videos are YouTube only: pass `--related` only when the speaker also has a YouTube channel.
+1. **yt-dlp reads the site** (`yt-dlp --list-extractors | grep -i <site>`: TED, Vimeo, Khan Academy, Udemy, LinkedIn Learning, Pluralsight, ...): run §4 subs and `fetch_meta.py` as usual. Sites that need a login (Udemy, LinkedIn Learning, Pluralsight, most of Vimeo) take `--cookies-from-browser chrome`, on yt-dlp and on `fetch_meta.py`. Udemy names no instructor and labels Arabic captions `en`: pass `--channel "<instructor>" --lang ar` to `fetch_meta.py`, and rename the `.vtt` to `.ar.vtt`. A Udemy lecture link downloads the whole course with yt-dlp; add `--playlist-items N` (N from the `--flat-playlist` listing) for one lecture. Related videos are YouTube only: pass `--related` only when the speaker also has a YouTube channel.
 2. **yt-dlp cannot read it** (Coursera has no extractor; Udemy answers 403 or the course is DRM): take the captions from the user's logged-in Chrome with the claude-in-chrome tools.
    1. Open the lecture, turn captions (CC) on and play a few seconds.
    2. `read_network_requests` with pattern `vtt|caption|subtitle` gives the caption file's URL. Coursera also lists "Subtitles (English) WebVTT" under the lecture's Downloads.
