@@ -35,6 +35,16 @@ def words_with_times(vtt):
     return words
 
 
+def at(v, t=None):
+    """Link to the video page, at second t when the site supports a start time."""
+    site = v.get('extractor_key') or 'Youtube'  # guides made before v1.2 have no extractor_key: all YouTube
+    if site == 'Youtube':
+        return f'https://www.youtube.com/watch?v={v["id"]}' + (f'&t={t}s' if t is not None else '')
+    url = v.get('webpage_url') or ''
+    # shortcut: only YouTube and Vimeo jump to the minute; others open the lecture page, add a site when its start-time URL is known
+    return f'{url}#t={t}s' if site == 'Vimeo' and t is not None else url
+
+
 def norm(w):
     return re.sub(r'[^\w]', '', w.lower())
 
@@ -46,7 +56,7 @@ def main():
     vtts = sorted(gdir.glob('*.vtt'))
     if not vtts:
         sys.exit('no .vtt in the guide folder: download subtitles first')
-    vid = json.loads((gdir / 'meta/video.json').read_text())['id']
+    video = json.loads((gdir / 'meta/video.json').read_text())
     stream = words_with_times(vtts[0].read_text())
     seq = [norm(w) for _, w in stream]
     missing = []
@@ -62,7 +72,7 @@ def main():
         t = find(m[1])
         if t is None:
             missing.append(m[1]); return m[0]
-        return f'▶️ [{t // 60:02d}:{t % 60:02d}](https://www.youtube.com/watch?v={vid}&t={t}s)'
+        return f'▶️ [{t // 60:02d}:{t % 60:02d}]({at(video, t)})'
 
     for md in sorted(gdir.glob('guide.*.md')):
         text = md.read_text()

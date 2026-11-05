@@ -1,11 +1,11 @@
 ---
 name: tube-scholar
-description: Turn any YouTube video into a bilingual (Arabic/English) study guide published as an interactive page — a 5-minute summary and decision table, an academic explanation with every section linked to its minute in the video, animated concept visuals, scenario quiz, glossary tooltips, spaced-repetition flashcards, an independent fact-check and a cheat-sheet PDF; a whole playlist becomes one long course page with every video's full guide. Also pulls plain subtitles/transcripts, audio or video for a video, playlist or channel. Use when the user pastes a YouTube link, wants a video explained, summarized for learning, turned into notes, a study guide, flashcards or a quiz ("اشرحلي الفيديو", "اعمل شرح للفيديو ده", "study guide", "لخصلي الفيديو للمذاكرة"), or asks for a transcript, subtitles, captions, audio or a download from YouTube ("هات الترجمة", "نزّل الـ subtitles", "عاوز الـ transcript", "نزّل البلاي ليست", "هات الصوت بس", "/tube-scholar").
+description: Turn any YouTube video (or a lecture on TED, Vimeo, Udemy, Coursera, LinkedIn Learning and other video sites) into a bilingual (Arabic/English) study guide published as an interactive page — a 5-minute summary and decision table, an academic explanation with every section linked to its minute in the video, animated concept visuals, scenario quiz, glossary tooltips, spaced-repetition flashcards, an independent fact-check and a cheat-sheet PDF; a whole playlist becomes one long course page with every video's full guide. Also pulls plain subtitles/transcripts, audio or video for a video, playlist or channel. Use when the user pastes a YouTube, Udemy, Coursera, TED or other video link, wants a video explained, summarized for learning, turned into notes, a study guide, flashcards or a quiz ("اشرحلي الفيديو", "اعمل شرح للفيديو ده", "study guide", "لخصلي الفيديو للمذاكرة"), or asks for a transcript, subtitles, captions, audio or a download from YouTube ("هات الترجمة", "نزّل الـ subtitles", "عاوز الـ transcript", "نزّل البلاي ليست", "هات الصوت بس", "/tube-scholar").
 ---
 
 # Tube Scholar
 
-Turn a YouTube link into something to learn from: by default a full study-guide page (§7); on request, plain subtitles, audio or video in a tidy folder, with nothing dumped in the home directory.
+Turn a YouTube link (or a lecture on another video site, §7d) into something to learn from: by default a full study-guide page (§7); on request, plain subtitles, audio or video in a tidy folder, with nothing dumped in the home directory.
 
 **Paths.** `$SKILL` below is this skill's own folder: the "Base directory for this skill" shown when it loads (`~/.claude/skills/tube-scholar` for a manual install, a plugin-cache path when installed as a plugin). Expand it before running a command.
 
@@ -86,7 +86,7 @@ Writes a `.txt` next to each `.vtt`: no timestamps, no tags, no repeated lines, 
 
 Turns one video into a guide someone can learn from without watching: an academic explanation per topic, each linked to its minute in the video, plus a 5-minute summary, quick mode, scenario quiz and flashcards, in Arabic and English, as one artifact page. Read `references/guide-format.md` before writing anything; it is the file contract and the quality bar.
 
-A playlist link is **course** mode (§7c): every video gets the full treatment below, and all of them land on one page.
+A playlist link is **course** mode (§7c): every video gets the full treatment below, and all of them land on one page. A link from another site (Udemy, Coursera, TED, Vimeo, ...) changes only where the subtitles and metadata come from (§7d).
 
 1. **Subs + transcript** (§4 subs, §5 clean text) into the video's folder. That folder is `<dir>` below.
 2. **Metadata and images.** Pick up to three related videos the description recommends; when it recommends none, search the speaker's own related videos instead (`--related-search "<speaker> <topic>"`, or list them with `yt-dlp --flat-playlist --print "%(id)s|%(title)s" "ytsearch8:<query>"` and pass the best three as `--related`, skipping re-uploads of this same course):
@@ -136,6 +136,25 @@ Wanting separate pages instead ("صفحة لكل فيديو"): publish each `gui
 ```bash
 ~/.cache/tube-scholar/venv/bin/python $SKILL/scripts/build_hub.py "<playlist-dir>/hub.html" "<playlist title>" "<video-dir-1>" "<video-dir-2>" ...
 ```
+
+### 7d. Other video sites (TED, Vimeo, Udemy, LinkedIn Learning, Coursera, ...)
+
+Everything in §7 and §7c stays the same; only steps 1 and 2 (subtitles and metadata) change.
+
+1. **yt-dlp reads the site** (`yt-dlp --list-extractors | grep -i <site>`: TED, Vimeo, Khan Academy, Udemy, LinkedIn Learning, Pluralsight, ...): run §4 subs and `fetch_meta.py` as usual. Sites that need a login (Udemy, LinkedIn Learning, Pluralsight, most of Vimeo) take `--cookies-from-browser chrome`, on yt-dlp and on `fetch_meta.py`. Related videos are YouTube only: pass `--related` only when the speaker also has a YouTube channel.
+2. **yt-dlp cannot read it** (Coursera has no extractor; Udemy answers 403 or the course is DRM): take the captions from the user's logged-in Chrome with the claude-in-chrome tools.
+   1. Open the lecture, turn captions (CC) on and play a few seconds.
+   2. `read_network_requests` with pattern `vtt|caption|subtitle` gives the caption file's URL. Coursera also lists "Subtitles (English) WebVTT" under the lecture's Downloads.
+   3. `curl -sL "<caption URL>" -o "<dir>/<lecture title>.en.vtt"`. If that returns HTML or 403, fetch it inside the page with `javascript_tool` (`fetch(url, {credentials: 'include'}).then(r => r.text())`) and write the text to that file.
+   4. Write the metadata by hand:
+      ```bash
+      python3 -I $SKILL/scripts/lecture_meta.py "<dir>" --url "<lecture URL>" --title "<lecture title>" \
+        --channel "<instructor or university>" --duration MM:SS [--chapters "0 Intro|95 Setup"] [--thumb IMAGE_URL]
+      ```
+   Then §5 and §7 from step 3. A whole course: read the lecture list from the course sidebar (`get_page_text`), make one folder per lecture, and follow §7c from step 2.
+3. **Only the captions.** Never download or try to unlock a DRM-protected video or audio track; say the site protects it and build the guide from the captions.
+
+▶️ links jump to the minute on YouTube and Vimeo. On other sites they open the lecture page and the minute shows as the link text.
 
 ## Gotchas
 

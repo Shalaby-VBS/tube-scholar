@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a bilingual study-guide page (one self-contained HTML file) for a YouTube video.
+"""Build a bilingual study-guide page (one self-contained HTML file) for a video (YouTube, Vimeo, Udemy, Coursera, ...).
 
 Usage: build_guide.py <guide-dir> [--out <file.html>] [--standalone]
 
@@ -16,6 +16,9 @@ Needs the `markdown` package: run it with the venv python from SKILL.md.
 import base64, collections, html, json, math, re, sys
 from datetime import date
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from resolve_ts import at  # noqa: E402  (one place builds every video link)
 
 try:
     import markdown
@@ -38,8 +41,8 @@ UI = {
     groups=dict(start='ابدأ هنا', ov='نظرة عامة', basic='الأساسيات', mid='المتوسط', adv='المتقدم', bonus='إضافي', ref='مرجع ومراجعة'),
     lv=dict(ov='نظرة عامة', basic='الأساسيات', mid='المتوسط', adv='المتقدم', bonus='إضافي', ref='مرجع'),
     nav_ch='فصول الفيديو الرسمية', nav_res='المصادر والروابط', nav_cards='Flashcards للمراجعة',
-    edition='{src} AUDIO → AR NOTES', play='شغّل الفيديو على YouTube', thumb_alt='صورة الفيديو', asof='الأرقام زي ما كانت على YouTube يوم {d}.',
-    watch='شوف الفيديو', channel='القناة على YouTube', sections='الأقسام', in_guide='محتوى الدليل', progress='تقدّمك',
+    edition='{src} AUDIO → AR NOTES', play='شغّل الفيديو على {p}', thumb_alt='صورة الفيديو', asof='الأرقام زي ما كانت على {p} يوم {d}.',
+    watch='شوف الفيديو', channel='القناة على {p}', sections='الأقسام', in_guide='محتوى الدليل', progress='تقدّمك',
     how='<b>طريقة القراءة:</b> كل قسم معلّم بلون مستواه، وزرار <span class="ts" style="padding:0 7px"><span aria-hidden="true">▶</span> 00:00</span> بيفتح الفيديو على نفس الجزء.',
     quick_note='الوضع السريع شغّال: بتشوف خلاصة كل قسم بس. اقفله من نفس الزرار علشان ترجع للشرح الكامل.',
     lead1='المصدر: نص الترجمة بتاع الفيديو. الأمثلة والأرقام من كلام المتحدث، وأي إضافة من عندي مكتوب جنبها <b>(ملاحظة الشارح)</b>.',
@@ -60,8 +63,8 @@ UI = {
     done='Mark as done', done_on='Done', quick='Quick mode', tldr_lvl='TL;DR · IN A HURRY', tldr_sm='The key points of the whole video, in minutes',
     groups=dict(start='Start here', ov='Overview', basic='Basics', mid='Intermediate', adv='Advanced', bonus='Bonus', ref='Reference & review'),
     lv=None, nav_ch='Official video chapters', nav_res='Resources and links', nav_cards='Review flashcards',
-    edition='ENGLISH EDITION', play='Play the video on YouTube', thumb_alt='Video thumbnail', asof='Figures as shown on YouTube on {d}.',
-    watch='Watch the video', channel='Channel on YouTube', sections='Sections', in_guide='In this guide', progress='Your progress',
+    edition='ENGLISH EDITION', play='Play the video on {p}', thumb_alt='Video thumbnail', asof='Figures as shown on {p} on {d}.',
+    watch='Watch the video', channel='Channel on {p}', sections='Sections', in_guide='In this guide', progress='Your progress',
     how='<b>How to read:</b> each section carries its level colour, and the <span class="ts" style="padding:0 7px"><span aria-hidden="true">▶</span> 00:00</span> button opens the video at that point.',
     quick_note='Quick mode is on: you see only each section\'s key takeaways. Use the same switch to return to the full explanation.',
     lead1="Source: the video's subtitles. Examples and numbers come from the speaker; anything I added is marked <b>(Explainer's note)</b>.",
@@ -404,9 +407,9 @@ def place_chapters(chapters, md, cmap):
         h = re.match(r'^#{2,3} (\d+(?:\.\d+)?)[. ]', line)
         if h:
             cur = h[1]; continue
-        t = re.match(r'^▶️ \[\d+:\d+\]\([^)]*?[?&]t=(\d+)s\)', line)
+        t = re.match(r'^▶️ \[(\d+):(\d\d)\]\(', line)  # the label, not the URL: only some sites carry the second in the link
         if t and cur and cur not in heads:
-            heads[cur] = int(t[1])
+            heads[cur] = int(t[1]) * 60 + int(t[2])
     missing = [k for k, v in cmap.items() if v not in heads]
     if missing:
         sys.exit(f'chapter_map points at headings with no ▶️ time: {missing}')
@@ -419,12 +422,12 @@ def render_wraps(gdir, vp=''):
     G = json.loads((gdir / 'guide.json').read_text())
     V = json.loads((gdir / 'meta/video.json').read_text())
     related = json.loads((gdir / 'meta/related.json').read_text()) if (gdir / 'meta/related.json').exists() else []
-    langs = G['langs']; vid = V['id']; vurl = f'https://www.youtube.com/watch?v={vid}'
+    langs = G['langs']; vid = V['id']; vurl = at(V); site = V.get('platform') or 'YouTube'
     today = date.today(); up = V.get('upload_date') or ''
     pub = date(int(up[:4]), int(up[4:6]), int(up[6:])) if len(up) == 8 else None
     img = {k: uri(gdir / 'meta' / f) for k, f in (('thumb', 'thumb.jpg'), ('avatar', 'avatar.jpg'), ('banner', 'banner.jpg'))}
     chapters = place_chapters(V.get('chapters') or [], (gdir / f'guide.{langs[0]}.md').read_text(), G.get('chapter_map', {})) if G.get('show_chapters', True) else []
-    ch_items = ''.join(f'<li><a href="{vurl}&amp;t={int(c["start_time"])}s" target="_blank" rel="noopener"><time>{int(c["start_time"]) // 60:02d}:{int(c["start_time"]) % 60:02d}</time>'
+    ch_items = ''.join(f'<li><a href="{html.escape(at(V, int(c["start_time"])))}" target="_blank" rel="noopener"><time>{int(c["start_time"]) // 60:02d}:{int(c["start_time"]) % 60:02d}</time>'
                        f'<span class="en">{html.escape(c["title"])}</span></a></li>' for c in chapters)
     tpl = (ASSETS / 'wrap.html').read_text()
     wraps, data = [], {'id': vid, 'langs': langs}
@@ -462,9 +465,9 @@ def render_wraps(gdir, vp=''):
             groups.append(('ref', 'ref', tail))
         nav = ''.join(f'<li class="grp lv-{lv}"><span class="gl"><span class="dot"></span>{U["groups"][key]}</span><ol>{"".join(it)}</ol></li>' for key, lv, it in groups if it)
 
-        stats = (f'<div><b>{compact(V.get("view_count"))}</b><span>{U["views"]}</span></div><div><b>{compact(V.get("like_count"))}</b><span>{U["likes"]}</span></div>'
-                 f'<div><b>{compact(V.get("comment_count"))}</b><span>{U["comments"]}</span></div>'
-                 f'<div><b class="ar">{fmt_date(pub, lang) if pub else "—"}</b><span>{U["published"]}</span></div>')
+        stats = (''.join(f'<div><b>{compact(V[k])}</b><span>{U[u]}</span></div>' for k, u in (('view_count', 'views'), ('like_count', 'likes'), ('comment_count', 'comments'))
+                         if V.get(k) is not None)  # course sites publish no counts; show only what the site gave
+                 + f'<div><b class="ar">{fmt_date(pub, lang) if pub else "—"}</b><span>{U["published"]}</span></div>')
         n_sec = sum(1 for i, _, _ in toc if i.startswith('sec-'))
         facts = (f'<span><b>{len(chapters)}</b> {U["f_ch"]}</span>' if chapters else '') + f'<span><b>{n_sec}</b> {U["f_sec"]}</span><span><b>{len(cards)}</b> {U["f_cards"]}</span>'
         ch_sec = ''
@@ -496,15 +499,15 @@ def render_wraps(gdir, vp=''):
         handle = ' · '.join(x for x in (V.get('uploader_id') or '', f'{compact(V.get("channel_follower_count"))} subscribers' if V.get('channel_follower_count') else '') if x)
         rep = {
             'DIR': 'rtl' if lang in RTL else 'ltr', 'LANG': lang, 'HIDDEN': ' hidden' if ix else '', 'CATEGORY': html.escape(((V.get('categories') or ['VIDEO'])[0]).upper()),
-            'EDITION': U['edition'].format(src=(V.get('language') or 'en').split('-')[0].upper()), 'VIDEO_URL': vurl, 'IMG_THUMB': img['thumb'], 'IMG_AVATAR': img['avatar'], 'DURATION': V.get('duration_string', ''),
+            'EDITION': U['edition'].format(src=(V.get('language') or 'en').split('-')[0].upper()), 'VIDEO_URL': html.escape(vurl), 'IMG_THUMB': img['thumb'], 'IMG_AVATAR': img['avatar'], 'DURATION': V.get('duration_string', ''),
             'BANNER_STYLE': f' style="background-image:url(\'{img["banner"]}\')"' if img['banner'] else '',
             'STATS': stats, 'ORIG': f'<p class="orig" dir="ltr" lang="en">{html.escape(V["title"])}</p>', 'H1': iso(html.escape(G['h1'][lang])),
             'H1_EM': iso(html.escape(G.get('h1_em', {}).get(lang, ''))), 'SUB': iso(html.escape(G['sub'][lang])), 'FACTS': facts,
             'CHANNEL': html.escape(V.get('channel', '')), 'VERIFIED': verified, 'HANDLE': html.escape(handle), 'ROLE': iso(html.escape(G.get('speaker_role', {}).get(lang, ''))),
-            'CHANNEL_URL': V.get('channel_url', vurl), 'TAGS': tags_html, 'NAV': nav, 'TLDR': tldr, 'CHAPTERS_SECTION': ch_sec, 'BODY': body,
+            'CHANNEL_URL': html.escape(V.get('channel_url') or vurl), 'TAGS': tags_html, 'NAV': nav, 'TLDR': tldr, 'CHAPTERS_SECTION': ch_sec, 'BODY': body,
             'RESOURCES_SECTION': res, 'FOOTER': foot,
         }
-        t_keys = dict(play=U['play'], thumb_alt=U['thumb_alt'], asof=U['asof'].format(d=fmt_date(today, lang)), watch=U['watch'], channel=U['channel'],
+        t_keys = dict(play=U['play'].format(p=site), thumb_alt=U['thumb_alt'], asof=U['asof'].format(p=site, d=fmt_date(today, lang)), watch=U['watch'], channel=U['channel'].format(p=site),
                       sections=U['sections'], in_guide=U['in_guide'], progress=U['progress'], quick=U['quick'], how=U['how'], quick_note=U['quick_note'],
                       lead1=U['lead1'], lead2=U['lead2'] if len(langs) > 1 or lang in RTL else '', cards_lvl=U['cards_lvl'], cards_h=U['nav_cards'],
                       cards_sm=U['cards_sm'], search=U['search'], filter=U['filter'], prev=U['prev'], next=U['next'], know=U['know'], again=U['again'], shuffle=U['shuffle'],

@@ -299,7 +299,8 @@ Every video gets its own folder under `~/Downloads/tube-scholar/`:
 | Script | Job |
 |---|---|
 | [`vtt2txt.py`](skills/tube-scholar/scripts/vtt2txt.py) | Auto-captions to clean, de-duplicated paragraphs |
-| [`fetch_meta.py`](skills/tube-scholar/scripts/fetch_meta.py) | Metadata, thumbnail, channel avatar and banner, related videos |
+| [`fetch_meta.py`](skills/tube-scholar/scripts/fetch_meta.py) | Metadata, thumbnail, channel avatar and banner, related videos; any site yt-dlp reads |
+| [`lecture_meta.py`](skills/tube-scholar/scripts/lecture_meta.py) | Hand-written metadata for lectures yt-dlp cannot read (Coursera, DRM Udemy courses) |
 | [`resolve_ts.py`](skills/tube-scholar/scripts/resolve_ts.py) | `[[ts: spoken words]]` markers to timestamp links; fails on words never said |
 | [`build_guide.py`](skills/tube-scholar/scripts/build_guide.py) | The bilingual page from the Markdown, the cards and `guide.json` |
 | [`preview_guide.py`](skills/tube-scholar/scripts/preview_guide.py) | Screenshots plus overflow and Mermaid checks; exits non-zero on a problem |

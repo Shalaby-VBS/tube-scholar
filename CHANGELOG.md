@@ -2,6 +2,16 @@
 
 All notable changes to Tube Scholar. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - 2026-11-05
+
+### Added
+- **Other video sites**: TED, Vimeo, Udemy, LinkedIn Learning, Pluralsight, Khan Academy and every other site yt-dlp reads; login-only sites take `--cookies-from-browser`.
+- **Coursera and DRM Udemy courses**: captions come from the logged-in Chrome session and `lecture_meta.py` writes the metadata (SKILL.md §7d). Only captions are used; protected video is never downloaded.
+
+### Changed
+- Timestamp links jump to the minute on YouTube and Vimeo and open the lecture page elsewhere; page labels name the source site.
+- Stat tiles show only the counts the site publishes, and a missing thumbnail or avatar no longer shows a broken image.
+
 ## [1.1.1] - 2026-11-05
 
 ### Fixed

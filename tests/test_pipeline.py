@@ -120,5 +120,37 @@ class Pipeline(unittest.TestCase):
         self.assertIn('https://example.com/guide', out.read_text())
 
 
+class OtherSites(unittest.TestCase):
+    """A guide for a lecture outside YouTube: links open the site's own page, labels name the site."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.dir = self.tmp / 'guide'
+        shutil.copytree(FIXTURE, self.dir)
+
+    def build(self, *meta_args):
+        result = run(SCRIPTS / 'lecture_meta.py', self.dir, *meta_args)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for step in ('resolve_ts.py', 'build_guide.py'):
+            result = run(SCRIPTS / step, self.dir)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        return (self.dir / 'guide.en.md').read_text(), (self.dir / 'guide.html').read_text()
+
+    def test_coursera_lecture_links_to_its_page(self):
+        url = 'https://www.coursera.org/learn/ml/lecture/iYR2y/welcome'
+        md, page = self.build('--url', url, '--title', 'Welcome', '--chapters', '0 Intro|30 Cache Basics')
+        self.assertIn(f'▶️ [00:30]({url})', md)
+        self.assertNotIn('youtube.com/watch', page)  # the fixture's socials still link a YouTube channel
+        self.assertIn('Play the video on Coursera', page)
+        self.assertNotIn('>—</b><span>Views', page)  # no counts from the site, so no empty stat tiles
+
+    def test_vimeo_link_jumps_to_the_minute(self):
+        md, _ = self.build('--url', 'https://vimeo.com/76979871', '--title', 'Talk', '--chapters', '0 Intro|30 Cache Basics')
+        meta = json.loads((self.dir / 'meta/video.json').read_text())
+        self.assertEqual(meta['platform'], 'Vimeo')
+        self.assertIn('▶️ [00:30](https://vimeo.com/76979871#t=30s)', md)
+
+
 if __name__ == '__main__':
     unittest.main()

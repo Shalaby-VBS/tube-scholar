@@ -1,20 +1,24 @@
 #!/usr/bin/env python3
 """Fetch a video's metadata and images for the study guide.
 
-Usage: fetch_meta.py <URL> <guide-dir> [--related ID,ID,...] [--related-search "QUERY"]
+Usage: fetch_meta.py <URL> <guide-dir> [--related ID,ID,...] [--related-search "QUERY"] [--cookies-from-browser chrome]
 
 Writes <guide-dir>/meta/: video.json (the fields the guide uses), thumb.jpg,
 avatar.jpg, banner.jpg, and for each related video rel_<id>.jpg plus related.json.
 Related videos: the --related ids, or else the top 3 YouTube results for --related-search
 (use it when the description recommends no videos, e.g. "<speaker name> <topic>").
 Images are shrunk with macOS `sips` when present, so the page stays small.
+Any site yt-dlp supports works; channel art is fetched for YouTube only. Login-only sites
+(Udemy, LinkedIn Learning) need --cookies-from-browser, passed through to yt-dlp.
 """
 import json, shutil, subprocess, sys, urllib.request
 from pathlib import Path
 
 KEEP = ('id', 'title', 'channel', 'channel_id', 'channel_url', 'uploader_id', 'channel_follower_count', 'channel_is_verified',
         'upload_date', 'duration_string', 'view_count', 'like_count', 'comment_count', 'categories', 'tags', 'chapters',
-        'description', 'language', 'thumbnail')
+        'description', 'language', 'thumbnail', 'webpage_url', 'extractor_key')
+
+NAMES = {'Youtube': 'YouTube', 'TedTalk': 'TED', 'LinkedIn': 'LinkedIn Learning'}  # extractor key -> name shown on the page
 
 
 def ytdlp_json(*args):
@@ -45,15 +49,20 @@ def main():
     url, gdir = sys.argv[1], Path(sys.argv[2]).expanduser()
     related = sys.argv[sys.argv.index('--related') + 1].split(',') if '--related' in sys.argv else []
     search = sys.argv[sys.argv.index('--related-search') + 1] if '--related-search' in sys.argv else ''
+    cookies = ['--cookies-from-browser', sys.argv[sys.argv.index('--cookies-from-browser') + 1]] if '--cookies-from-browser' in sys.argv else []
     meta = gdir / 'meta'
     meta.mkdir(parents=True, exist_ok=True)
 
-    v = ytdlp_json('--skip-download', '--no-playlist', url)
-    (meta / 'video.json').write_text(json.dumps({k: v.get(k) for k in KEEP}, ensure_ascii=False, indent=1))
-    if download(f'https://i.ytimg.com/vi/{v["id"]}/maxresdefault.jpg', meta / 'thumb.jpg') or download(v.get('thumbnail', ''), meta / 'thumb.jpg'):
+    v = ytdlp_json('--skip-download', '--no-playlist', *cookies, url)
+    yt = v.get('extractor_key') == 'Youtube'
+    info = {k: v.get(k) for k in KEEP}
+    info['platform'] = NAMES.get(v.get('extractor_key'), v.get('extractor_key'))
+    info['channel'] = v.get('channel') or v.get('uploader')  # TED, Udemy and most non-YouTube sites fill uploader only
+    (meta / 'video.json').write_text(json.dumps(info, ensure_ascii=False, indent=1))
+    if (yt and download(f'https://i.ytimg.com/vi/{v["id"]}/maxresdefault.jpg', meta / 'thumb.jpg')) or (v.get('thumbnail') and download(v['thumbnail'], meta / 'thumb.jpg')):
         shrink(meta / 'thumb.jpg', '-s', 'formatOptions', '72', '-Z', '1100')
 
-    if v.get('channel_url'):
+    if yt and v.get('channel_url'):
         ch = ytdlp_json('--flat-playlist', '--playlist-items', '0', v['channel_url'])
         thumbs = {t.get('id'): t['url'] for t in ch.get('thumbnails', []) if t.get('id')}
         if 'avatar_uncropped' in thumbs and download(thumbs['avatar_uncropped'].replace('=s0', '=s240'), meta / 'avatar.jpg'):
