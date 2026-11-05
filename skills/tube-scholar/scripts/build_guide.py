@@ -182,8 +182,8 @@ def visual_calc(src, n):
         if not eq:
             left, right = raw, ''
         parts = re.split(r'\s+([×x÷/+−\-])\s+', left.strip())
-        chips = ''.join(f'<span class="op">{e(t)}</span>' if t in '×x÷/+−-' else f'<span class="term">{e(t)}</span>' for t in parts if t)
-        rows.append(f'<div class="calc-row" style="--i:{len(rows)}">{chips}' + (f'<span class="op">=</span><span class="cres">{e(right.strip())}</span>' if right else '') + '</div>')
+        chips = ''.join(f'<span class="op">{e(t)}</span>' if t in '×x÷/+−-' else f'<span class="term" dir="auto">{e(t)}</span>' for t in parts if t)
+        rows.append(f'<div class="calc-row" style="--i:{len(rows)}">{chips}' + (f'<span class="op">=</span><span class="cres" dir="auto">{e(right.strip())}</span>' if right else '') + '</div>')
     title = f'<figcaption class="calc-t">{e(k["title"])}</figcaption>' if k.get('title') else ''
     note = f'<p class="calc-note">{e(k["note"])}</p>' if k.get('note') else ''
     return f'<figure class="calc">{title}<div class="calc-rows" dir="ltr">{"".join(rows)}</div>{note}</figure>'

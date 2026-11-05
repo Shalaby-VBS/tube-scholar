@@ -2,6 +2,11 @@
 
 All notable changes to Tube Scholar. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.1.1] - 2026-11-05
+
+### Fixed
+- Arabic terms inside calculation visuals now keep their own text direction (`dir="auto"`), so mixed Arabic/English equations read in the right order.
+
 ## [1.1.0] - 2026-11-04
 
 ### Added
