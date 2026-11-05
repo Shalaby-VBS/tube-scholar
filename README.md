@@ -11,6 +11,7 @@
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-3776AB?style=flat-square&logo=python&logoColor=white)](#requirements)
 [![yt-dlp](https://img.shields.io/badge/powered_by-yt--dlp-E0201B?style=flat-square&logo=youtube&logoColor=white)](https://github.com/yt-dlp/yt-dlp)
 [![Languages](https://img.shields.io/badge/guides-Arabic_%2B_English-13202A?style=flat-square)](#what-you-get)
+[![Sites](https://img.shields.io/badge/sources-YouTube_·_Udemy_·_Coursera_·_TED_·_Vimeo-13202A?style=flat-square)](#video-sites)
 
 <a href="https://shalaby-vbs.github.io/tube-scholar/demo/"><img src="https://img.shields.io/badge/%E2%96%B6%20Try%20the%20live%20demo-3DC1AF?style=for-the-badge" alt="Try the live demo"></a>
 
@@ -27,9 +28,9 @@
 
 ---
 
-Tube Scholar is a [Claude Code](https://claude.com/claude-code) skill that turns a YouTube video into a complete, interactive study guide. It reads the entire transcript, writes an academic explanation of everything the speaker teaches in **Arabic and English**, has an independent agent fact-check every number and claim against the transcript, and publishes the result as a single page you can share.
+Tube Scholar is a [Claude Code](https://claude.com/claude-code) skill that turns a YouTube video, a whole playlist, or a lecture on Udemy, Coursera, TED, Vimeo or LinkedIn Learning into a complete, interactive study guide. It reads the entire transcript, writes an academic explanation of everything the speaker teaches in **Arabic and English**, has an independent agent fact-check every number and claim against the transcript, and publishes the result as a single page you can share.
 
-A 38-minute lecture becomes a 5-minute summary. A 3-hour course becomes nineteen sections you can skim, search, quiz yourself on and jump back into the video from, at the exact minute.
+A 38-minute lecture becomes a 5-minute summary. A 3-hour course becomes nineteen sections you can skim, search, quiz yourself on and jump back into the video from, at the exact minute. A playlist becomes one long course page with every video's full guide.
 
 **[Open the live demo](https://shalaby-vbs.github.io/tube-scholar/demo/)**: the full guide for a 3-hour freeCodeCamp system-design course, built by this skill. Switch languages, search for "sharding", take the quiz, flip the flashcards.
 
@@ -74,7 +75,8 @@ A 38-minute lecture becomes a 5-minute summary. A 3-hour course becomes nineteen
 ### 📦 Take-aways
 - **Arabic (RTL) and English (LTR)** editions on one page
 - **Anki decks** and an **A4 cheat-sheet PDF** per language
-- A **hub page** for playlists, with progress across videos
+- A **course page** for a whole playlist: every video's full guide on one page
+- Or a **hub page** linking one page per video, with progress across them
 
 </td>
 </tr>
@@ -137,6 +139,14 @@ Give Claude Code a link:
 
 That's it. Claude reads the video, writes both editions, fact-checks them, previews the page and publishes it, then replies with the link and a short report of what it added or corrected.
 
+A whole playlist, or a lecture on another site, works the same way:
+
+```text
+/tube-scholar https://www.youtube.com/playlist?list=PLAYLIST_ID
+/tube-scholar https://www.udemy.com/course/COURSE/learn/lecture/LECTURE_ID
+/tube-scholar https://www.coursera.org/learn/COURSE/lecture/ID/TITLE
+```
+
 > [!TIP]
 > A bare video link always builds the full guide. Ask for "subtitles", "audio" or "download the video" when you want just the files.
 
@@ -144,7 +154,7 @@ That's it. Claude reads the video, writes both editions, fact-checks them, previ
 
 ```mermaid
 flowchart LR
-    A([YouTube link]) --> B[Subtitles and<br/>clean transcript]
+    A([Video or playlist link]) --> B[Subtitles and<br/>clean transcript]
     B --> C[Metadata, thumbnail,<br/>channel art, related videos]
     C --> D[Arabic guide written<br/>from the transcript]
     D --> E[English translation,<br/>line by line]
@@ -159,10 +169,23 @@ flowchart LR
 | Mode | Triggered by | Output |
 |---|---|---|
 | **Study guide** *(default)* | a single video link, "explain", "study guide" | the interactive page, Anki decks, cheat-sheet PDFs, fact-check report |
-| **Subtitles** | "subtitles", "transcript", or a playlist/channel link | `.vtt` captions plus a clean `.txt` transcript |
+| **Subtitles** | "subtitles", "transcript", or a channel link | `.vtt` captions plus a clean `.txt` transcript |
 | **Audio** | "audio", "mp3" | MP3 at the best available quality |
 | **Video** | "download the video" | MP4 up to 1080p |
-| **Course hub** | a playlist plus "make guides" | one guide per video and a hub page linking them all |
+| **Course page** | a playlist link, "course" | every video's full guide on one long page, with a course index |
+| **Course hub** | a playlist plus "a page per video" | one guide per video and a hub page linking them all |
+
+### Video sites
+
+| Site | How the captions arrive | Minute links |
+|---|---|---|
+| YouTube | yt-dlp | jump to the minute |
+| Vimeo | yt-dlp, with `--cookies-from-browser` for most videos | jump to the minute |
+| TED, Khan Academy | yt-dlp | open the talk page |
+| Udemy, LinkedIn Learning, Pluralsight | yt-dlp with `--cookies-from-browser chrome` (you must be enrolled and signed in) | open the lecture page |
+| Coursera, DRM-protected Udemy courses | read from your signed-in Chrome by Claude, then `lecture_meta.py` | open the lecture page |
+
+Only the captions are used. Tube Scholar never downloads or unlocks DRM-protected video or audio.
 
 ## How it stays accurate
 
@@ -305,6 +328,7 @@ Every video gets its own folder under `~/Downloads/tube-scholar/`:
 | [`build_guide.py`](skills/tube-scholar/scripts/build_guide.py) | The bilingual page from the Markdown, the cards and `guide.json` |
 | [`preview_guide.py`](skills/tube-scholar/scripts/preview_guide.py) | Screenshots plus overflow and Mermaid checks; exits non-zero on a problem |
 | [`cheatsheet.py`](skills/tube-scholar/scripts/cheatsheet.py) | An A4 cheat-sheet PDF per language |
+| [`build_course.py`](skills/tube-scholar/scripts/build_course.py) | One course page from every video's guide in a playlist |
 | [`build_hub.py`](skills/tube-scholar/scripts/build_hub.py) | The playlist hub page |
 
 ### Repository layout
@@ -331,6 +355,12 @@ tube-scholar/
 <summary><b>Does it work for videos that aren't in English?</b></summary>
 <br>
 The pipeline reads whatever caption track it downloads (English by default). For another source language, ask for that subtitle language; the guide is still written in Arabic and English.
+</details>
+
+<details>
+<summary><b>Does it work with Udemy or Coursera?</b></summary>
+<br>
+Yes, for courses you are enrolled in. Sign in to the site in Chrome first. Udemy goes through yt-dlp with your browser cookies; Coursera has no yt-dlp support, so Claude reads the lecture's caption file from your signed-in browser. A lecture link builds a guide for that lecture; ask for "the whole course" to get every lecture on one page. See <a href="#video-sites">Video sites</a>.
 </details>
 
 <details>
