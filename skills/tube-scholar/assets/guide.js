@@ -204,27 +204,74 @@
     return a;
   }
   function show(lang){ if(!roots[lang]) lang=DATA.langs[0]; st.lang=lang; save(); Object.keys(roots).forEach(function(k){ roots[k].hidden=(k!==lang); }); }
-  return {st:st, PFX:PFX, anchor:anchor, show:show, init:function(){ Object.keys(roots).forEach(initLang); paint(); }};
+  return {st:st, PFX:PFX, box:box, anchor:anchor, show:show, init:function(){ Object.keys(roots).forEach(initLang); paint(); }};
   }
 
   // language switch: show one edition of every guide, keep the reader on the same section
-  var G=LIST.map(guide), lang0=G[0].st.lang;
+  // a course page keeps each video in a <template> until the reader gets near it: mounting all 20 videos
+  // x 2 editions at once meant ~120k elements and 120 diagrams before the first paint
+  var G=[], lang0=LIST[0].langs[0];
+  try{ var s0=JSON.parse(localStorage.getItem('ytguide-'+LIST[0].id)||'{}'); if(LIST[0].langs.indexOf(s0.lang)>-1) lang0=s0.lang; }catch(e){}
+  function mount(D){
+    if(D.g) return D.g;
+    var b=D.box&&document.getElementById(D.box), t=b&&b.querySelector('template.lazy');
+    if(t){
+      var above=b.getBoundingClientRect().bottom<=0, y=b.getBoundingClientRect().bottom, ph=b.querySelector('.cph');
+      t.parentNode.replaceChild(t.content,t); if(ph) ph.parentNode.removeChild(ph);
+      if(window.__ti) window.__ti(b);
+      if(above) scrollBy(0,b.getBoundingClientRect().bottom-y);  // mounted above the reader: keep the view still
+    }
+    var g=D.g=guide(D); g.order=LIST.indexOf(D); G.push(g); G.sort(function(a,c){return a.order-c.order});
+    g.show(lang0); g.init(); if(t) drawMermaid();
+    return g;
+  }
+  // diagrams inside a mounted template: draw the shown edition's ones if the host has not drawn them
+  var MM=null;
+  function drawMermaid(){ clearTimeout(drawMermaid.t); drawMermaid.t=setTimeout(function(){
+    var todo=Array.prototype.filter.call(document.querySelectorAll('.cvid .wrap:not([hidden]) pre.mermaid'),function(p){return !p.querySelector('svg')&&!p.getAttribute('data-processed')});
+    if(!todo.length) return;
+    if(window.mermaid&&window.mermaid.run){ try{ window.mermaid.run({nodes:todo}); }catch(e){} return; }
+    if(MM) return;
+    MM=document.createElement('script'); MM.src='https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js';
+    MM.onload=function(){ window.mermaid.initialize({startOnLoad:false,theme:matchMedia('(prefers-color-scheme: dark)').matches?'dark':'default'}); drawMermaid(); };
+    document.head.appendChild(MM);
+  },900); }
+  function owner(id){ var o=null; LIST.forEach(function(x){ if(x.box&&(id===x.box||id.indexOf(x.vp)===0)) o=x; }); return o; }
   function setLang(lang,keep){
     var hit=null;
-    if(keep) G.forEach(function(g){ var a=g.anchor(); if(a) hit={g:g,id:a}; });  // guides are in page order: the last hit is the one being read
-    G.forEach(function(g){ g.show(lang); }); lang0=lang;
+    // the guide being read: on a course page the one whose box spans the top of the view, else the last with a heading above the fold
+    if(keep) G.forEach(function(g){
+      if(g.box.getBoundingClientRect){ var r=g.box.getBoundingClientRect(); if(r.top<160&&r.bottom>160) hit={g:g,id:g.anchor()}; }
+      else { var a=g.anchor(); if(a) hit={g:g,id:a}; }
+    });
+    lang0=lang; G.forEach(function(g){ g.show(lang); });
     each(document.querySelectorAll('[data-course-lang]'),function(el){ el.hidden=el.dataset.courseLang!==lang; });
-    var w=document.querySelector('.wrap[data-lang="'+lang+'"]');
+    if(MM||document.querySelector('.cvid')) drawMermaid();
+    var w=document.querySelector('.wrap[data-lang="'+lang+'"], .wrap[data-course-lang="'+lang+'"]');
     document.documentElement.lang=lang; if(w) document.documentElement.dir=w.getAttribute('dir');
     each(document.querySelectorAll('.langsw button'),function(b){b.setAttribute('aria-pressed',String(b.dataset.l===lang))});
     dispatchEvent(new Event('resize'));
-    if(hit){ var t=document.getElementById(hit.g.PFX[lang]+hit.id); if(t) t.scrollIntoView({block:'start',behavior:'instant'}); }
+    if(hit){ var t=hit.id&&document.getElementById(hit.g.PFX[lang]+hit.id); t=t||(hit.g.box.scrollIntoView?hit.g.box:null); if(t) t.scrollIntoView({block:'start',behavior:'instant'}); }
     else if(keep) scrollTo({top:0,behavior:'instant'});
   }
   each(document.querySelectorAll('.langsw button'),function(b){ b.addEventListener('click',function(){ if(b.dataset.l!==lang0) setLang(b.dataset.l,true); }); });
 
   setLang(lang0,false);
-  G.forEach(function(g){ g.init(); });
+  var lazy=LIST.filter(function(D){ var b=D.box&&document.getElementById(D.box); return b&&b.querySelector('template.lazy'); });
+  LIST.forEach(function(D){ if(lazy.indexOf(D)<0) mount(D); });
+  if(lazy.length){
+    if('IntersectionObserver' in window){
+      var lio=new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ lio.unobserve(e.target); mount(owner(e.target.id)); } }); },{rootMargin:'600px 0px'});
+      lazy.forEach(function(D){ lio.observe(document.getElementById(D.box)); });
+    } else lazy.forEach(mount);
+    // a link or address into a video not mounted yet: mount it, then go there
+    var jump=function(id){ var D=owner(id); if(!D||D.g) return false; mount(D); var el=document.getElementById(id); if(el) el.scrollIntoView({block:'start'}); return true; };
+    document.addEventListener('click',function(e){
+      var a=e.target.closest&&e.target.closest('a[href^="#"]'); if(!a) return;
+      var id=a.getAttribute('href').slice(1); if(jump(id)){ e.preventDefault(); try{ history.replaceState(null,'','#'+id); }catch(x){} }
+    },true);
+    addEventListener('load',function(){ if(location.hash.length>1) jump(decodeURIComponent(location.hash.slice(1))); });
+  }
 
   // reading progress + back to top
   var prog=document.getElementById('prog'), top=document.getElementById('totop');

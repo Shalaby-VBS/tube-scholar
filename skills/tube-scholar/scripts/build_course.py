@@ -9,11 +9,30 @@ works per video on the shared page: ids are prefixed v1-, v2-, ..., progress and
 kept per video (the same browser keys as the video's own guide page), and one language switch flips
 every video. Needs the `markdown` package: run it with the venv python from SKILL.md.
 """
-import html, json, sys
+import base64, html, json, shutil, subprocess, sys, tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from build_guide import RTL, bidi, page_html, render_wraps, uri  # noqa: E402
+import build_guide  # noqa: E402
+from build_guide import RTL, bidi, page_html, render_wraps  # noqa: E402
+
+_TMP = Path(tempfile.mkdtemp(prefix='tube-course-'))
+_full_uri = build_guide.uri
+
+
+def uri(path, width=640):
+    """build_guide.uri, but JPEGs scaled down to `width` px: a course embeds ~40 thumbnails, avatars and
+    related-video images, and the 1100 px originals were 3 MB of the page."""
+    p = Path(path)
+    if not p.exists():
+        return ''
+    if p.suffix.lower() in ('.jpg', '.jpeg') and shutil.which('sips'):
+        out = _TMP / f'{abs(hash(str(p)))}.jpg'
+        r = subprocess.run(['sips', '-Z', str(width), '-s', 'format', 'jpeg', '-s', 'formatOptions', '72', str(p), '--out', str(out)], capture_output=True)
+        if r.returncode == 0 and out.exists() and out.stat().st_size < p.stat().st_size:
+            return 'data:image/jpeg;base64,' + base64.b64encode(out.read_bytes()).decode()
+    return _full_uri(p)
+# shortcut: sips is macOS-only; elsewhere the full-size images are kept. Upgrade trigger: building courses off macOS.
 
 T = {
  'ar': dict(kicker='COURSE · FULL PLAYLIST', sub='البلاي ليست كلها في صفحة واحدة: كل فيديو ليه دليله الكامل بالترتيب، خلاصة وشرح لكل جزء وأسئلة سيناريو و Flashcards.',
@@ -33,7 +52,8 @@ CSS = '''<style>
 .cidx .n{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:600;display:block}
 .cidx b{font-family:var(--display);font-size:14.5px;line-height:1.5;display:block;overflow-wrap:anywhere}
 .cidx small{font-size:12px;color:var(--muted)}
-.cvid{scroll-margin-top:12px}
+.cvid{scroll-margin-top:12px;overflow-anchor:none}
+.cph{min-height:150vh}
 .csep{max-width:1100px;margin:56px auto 0;padding:14px 18px;border-top:3px solid var(--accent);font-family:var(--mono);font-size:13px;font-weight:600;color:var(--accent)}
 </style>'''
 
@@ -52,6 +72,7 @@ def main():
         sys.exit(__doc__)
     out, title, dirs = Path(args[0]).expanduser(), args[1], [Path(d).expanduser().resolve() for d in args[2:]]
     vids, datas, langs = [], [], None
+    build_guide.uri = uri  # render_wraps embeds the hero, avatar, banner and related images through this
     for i, d in enumerate(dirs, 1):
         wraps, data, G, gl = render_wraps(d, f'v{i}-')
         data['box'] = f'v{i}'
@@ -81,7 +102,9 @@ def main():
         f'<div class="csep" data-course-lang="{l}" dir="{"rtl" if l in RTL else "ltr"}"{" hidden" if k else ""}>{T.get(l, T["en"])["of"].format(i=i, n=n)} · '
         f'<bdi>{e(v["V"]["title"])}</bdi></div>' for k, l in enumerate(langs))
     body = CSS + '\n' + '\n'.join(heads) + '\n' + '\n'.join(
-        f'<section class="cvid" id="v{i}">{seps(i, v)}\n' + '\n'.join(v['wraps']) + '</section>' for i, v in enumerate(vids, 1))
+        # each video stays inert in a <template> until guide.js mounts it near the viewport
+        f'<section class="cvid" id="v{i}">{seps(i, v)}\n<div class="cph" aria-hidden="true"></div><template class="lazy">' + '\n'.join(v['wraps']) + '</template></section>'
+        for i, v in enumerate(vids, 1))
     page = page_html(title, langs, body, datas, '--standalone' in sys.argv)
     out.write_text(page)
     mb = len(page.encode()) / 1e6

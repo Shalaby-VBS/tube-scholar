@@ -559,9 +559,11 @@ def dedupe_images(page):
     key = {u: str(i) for i, u in enumerate(rep)}
     page = re.sub(r'src="(data:image/[^"]+)"', lambda m: f'data-ti="{key[m[1]]}"' if m[1] in key else m[0], page)
     page = re.sub(r'style="background-image:url\(\'(data:image/[^\']+)\'\)"', lambda m: f'data-tbg="{key[m[1]]}"' if m[1] in key else m[0], page)
+    # window.__ti(root) also fills a course video's images when guide.js mounts it from its <template>
     return page + ('<script>(function(){var I=' + json.dumps(rep) + ';'
-                   "document.querySelectorAll('[data-ti]').forEach(function(e){e.src=I[e.dataset.ti]});"
-                   "document.querySelectorAll('[data-tbg]').forEach(function(e){e.style.backgroundImage='url('+I[e.dataset.tbg]+')'})})();</script>\n")
+                   "function f(r){r.querySelectorAll('[data-ti]').forEach(function(e){e.src=I[e.dataset.ti]});"
+                   "r.querySelectorAll('[data-tbg]').forEach(function(e){e.style.backgroundImage='url('+I[e.dataset.tbg]+')'})}"
+                   "window.__ti=f;f(document)})();</script>\n")
 
 
 def build(gdir, out, standalone=False):
