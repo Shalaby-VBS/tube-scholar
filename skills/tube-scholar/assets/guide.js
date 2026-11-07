@@ -189,13 +189,26 @@
       document.getElementById(P+'doneb').style.transform='scaleX('+(tot?n/tot:0)+')';
     });
   }
-  each(box.querySelectorAll('.done'),function(b){ b.addEventListener('click',function(){
+  function wire(root){
+  each(root.querySelectorAll('.done'),function(b){ b.addEventListener('click',function(){
     var k=st.done.indexOf(b.dataset.id); if(k>-1) st.done.splice(k,1); else st.done.push(b.dataset.id); save(); paint();
   })});
-  each(box.querySelectorAll('.qbtn'),function(b){ b.addEventListener('click',function(){
+  each(root.querySelectorAll('.qbtn'),function(b){ b.addEventListener('click',function(){
     var anchor=b.closest('.sec')||b, y=anchor.getBoundingClientRect().top;
     st.quick=!st.quick; save(); paint(); scrollBy(0,anchor.getBoundingClientRect().top-y);
   })});
+
+  }
+  Object.keys(roots).forEach(function(k){ wire(roots[k]); });
+  // a course video keeps each language edition as inert text (<script type="text/html" class="lazy">) until it is shown
+  var ready=false;
+  function ensure(lang){
+    if(roots[lang]||!DATA.box) return;
+    var s=box.querySelector('script.lazy[data-lang="'+lang+'"]'); if(!s) return;
+    var f=document.createRange().createContextualFragment(s.textContent), w=f.querySelector('.wrap[data-lang]');
+    s.parentNode.replaceChild(f,s); if(window.__ti) window.__ti(w);
+    roots[lang]=w; wire(w); if(ready){ initLang(lang); paint(); }
+  }
 
   // the last heading above the fold in the shown edition, without its prefix
   function anchor(){
@@ -203,26 +216,22 @@
     if(cur && !cur.hidden) each(cur.querySelectorAll('h2[id], section[id]'),function(h){ if(h.getBoundingClientRect().top<160) a=h.id.replace(PFX[st.lang],''); });
     return a;
   }
-  function show(lang){ if(!roots[lang]) lang=DATA.langs[0]; st.lang=lang; save(); Object.keys(roots).forEach(function(k){ roots[k].hidden=(k!==lang); }); }
-  return {st:st, PFX:PFX, box:box, anchor:anchor, show:show, init:function(){ Object.keys(roots).forEach(initLang); paint(); }};
+  function show(lang){ ensure(lang); if(!roots[lang]) lang=DATA.langs[0]; st.lang=lang; save(); Object.keys(roots).forEach(function(k){ roots[k].hidden=(k!==lang); }); }
+  return {st:st, PFX:PFX, box:box, anchor:anchor, show:show, init:function(){ ready=true; Object.keys(roots).forEach(initLang); paint(); }};
   }
 
   // language switch: show one edition of every guide, keep the reader on the same section
-  // a course page keeps each video in a <template> until the reader gets near it: mounting all 20 videos
+  // a course page keeps each video as inert text until the reader gets near it: mounting all 20 videos
   // x 2 editions at once meant ~120k elements and 120 diagrams before the first paint
   var G=[], lang0=LIST[0].langs[0];
   try{ var s0=JSON.parse(localStorage.getItem('ytguide-'+LIST[0].id)||'{}'); if(LIST[0].langs.indexOf(s0.lang)>-1) lang0=s0.lang; }catch(e){}
   function mount(D){
     if(D.g) return D.g;
-    var b=D.box&&document.getElementById(D.box), t=b&&b.querySelector('template.lazy');
-    if(t){
-      var above=b.getBoundingClientRect().bottom<=0, y=b.getBoundingClientRect().bottom, ph=b.querySelector('.cph');
-      t.parentNode.replaceChild(t.content,t); if(ph) ph.parentNode.removeChild(ph);
-      if(window.__ti) window.__ti(b);
-      if(above) scrollBy(0,b.getBoundingClientRect().bottom-y);  // mounted above the reader: keep the view still
-    }
+    var b=D.box&&document.getElementById(D.box), t=b&&b.querySelector('script.lazy'), above=false, y=0;
+    if(t){ var r=b.getBoundingClientRect(), ph=b.querySelector('.cph'); above=r.bottom<=0; y=r.bottom; if(ph) ph.parentNode.removeChild(ph); }
     var g=D.g=guide(D); g.order=LIST.indexOf(D); G.push(g); G.sort(function(a,c){return a.order-c.order});
-    g.show(lang0); g.init(); if(t) drawMermaid();
+    g.show(lang0); g.init();  // show() mounts only the edition in the current language
+    if(t){ if(above) scrollBy(0,b.getBoundingClientRect().bottom-y); drawMermaid(); }  // mounted above the reader: keep the view still
     return g;
   }
   // diagrams inside a mounted template: draw the shown edition's ones if the host has not drawn them
@@ -257,7 +266,7 @@
   each(document.querySelectorAll('.langsw button'),function(b){ b.addEventListener('click',function(){ if(b.dataset.l!==lang0) setLang(b.dataset.l,true); }); });
 
   setLang(lang0,false);
-  var lazy=LIST.filter(function(D){ var b=D.box&&document.getElementById(D.box); return b&&b.querySelector('template.lazy'); });
+  var lazy=LIST.filter(function(D){ var b=D.box&&document.getElementById(D.box); return b&&b.querySelector('script.lazy'); });
   LIST.forEach(function(D){ if(lazy.indexOf(D)<0) mount(D); });
   if(lazy.length){
     if('IntersectionObserver' in window){

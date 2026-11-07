@@ -9,7 +9,7 @@ works per video on the shared page: ids are prefixed v1-, v2-, ..., progress and
 kept per video (the same browser keys as the video's own guide page), and one language switch flips
 every video. Needs the `markdown` package: run it with the venv python from SKILL.md.
 """
-import base64, html, json, shutil, subprocess, sys, tempfile
+import base64, html, json, re, shutil, subprocess, sys, tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -58,6 +58,13 @@ CSS = '''<style>
 </style>'''
 
 
+def lazy(wrap):
+    lang = re.search(r'data-lang="([\w-]+)"', wrap)[1]
+    if re.search(r'</script|<!--', wrap, re.I):  # would end or confuse the raw-text script element
+        sys.exit(f'cannot make the {lang} edition lazy: it contains </script or <!--')
+    return f'<script type="text/html" class="lazy" data-lang="{lang}">{wrap}</script>'
+
+
 def secs(s):
     """'1:26:12' / '50:13' -> seconds (fetch_meta.py keeps only duration_string)."""
     t = 0
@@ -102,8 +109,8 @@ def main():
         f'<div class="csep" data-course-lang="{l}" dir="{"rtl" if l in RTL else "ltr"}"{" hidden" if k else ""}>{T.get(l, T["en"])["of"].format(i=i, n=n)} · '
         f'<bdi>{e(v["V"]["title"])}</bdi></div>' for k, l in enumerate(langs))
     body = CSS + '\n' + '\n'.join(heads) + '\n' + '\n'.join(
-        # each video stays inert in a <template> until guide.js mounts it near the viewport
-        f'<section class="cvid" id="v{i}">{seps(i, v)}\n<div class="cph" aria-hidden="true"></div><template class="lazy">' + '\n'.join(v['wraps']) + '</template></section>'
+        # each language edition stays inert text until guide.js mounts it: a <template> would still be parsed into nodes
+        f'<section class="cvid" id="v{i}">{seps(i, v)}\n<div class="cph" aria-hidden="true"></div>' + ''.join(lazy(w) for w in v['wraps']) + '</section>'
         for i, v in enumerate(vids, 1))
     page = page_html(title, langs, body, datas, '--standalone' in sys.argv)
     out.write_text(page)
